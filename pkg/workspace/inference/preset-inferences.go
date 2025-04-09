@@ -40,7 +40,7 @@ var (
 				Path: ProbePath,
 			},
 		},
-		InitialDelaySeconds: 600, // 10 minutes
+		InitialDelaySeconds: 1800, // 30 minutes
 		PeriodSeconds:       10,
 	}
 
@@ -101,6 +101,7 @@ func updateTorchParamsForDistributedInference(ctx context.Context, kubeClient cl
 }
 
 func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace, presetObj *model.PresetParam) (string, []corev1.LocalObjectReference) {
+	var imageName string
 	imagePullSecretRefs := []corev1.LocalObjectReference{}
 	// Check if the workspace preset's access mode is private
 	if len(workspaceObj.Inference.Adapters) > 0 {
@@ -110,20 +111,23 @@ func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace,
 			}
 		}
 	}
-	if string(workspaceObj.Inference.Preset.AccessMode) == string(v1beta1.ModelImageAccessModePrivate) {
-		imageName := workspaceObj.Inference.Preset.PresetOptions.Image
-		for _, secretName := range workspaceObj.Inference.Preset.PresetOptions.ImagePullSecrets {
-			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})
-		}
-		return imageName, imagePullSecretRefs
-	} else {
-		imageName := string(workspaceObj.Inference.Preset.Name)
+
+	switch workspaceObj.Inference.Preset.AccessMode {
+	case v1beta1.ModelImageAccessModePublic:
+		imageName = string(workspaceObj.Inference.Preset.Name)
 		imageTag := presetObj.Tag
 		registryName := os.Getenv("PRESET_REGISTRY_NAME")
 		imageName = fmt.Sprintf("%s/kaito-%s:%s", registryName, imageName, imageTag)
-
-		return imageName, imagePullSecretRefs
+	case v1beta1.ModelImageAccessModePrivate:
+		imageName = workspaceObj.Inference.Preset.PresetOptions.Image
+		for _, secretName := range workspaceObj.Inference.Preset.PresetOptions.ImagePullSecrets {
+			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})
+		}
+	case v1beta1.ModelImageAccessModeDownload:
+		imageName = "ernestwong.azurecr.io/kaito/base:0.0.1"
 	}
+
+	return imageName, imagePullSecretRefs
 }
 
 func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace, revisionNum string,
@@ -187,6 +191,11 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		adapterVolume, adapterVolumeMount := utils.ConfigAdapterVolume()
 		volumes = append(volumes, adapterVolume)
 		volumeMounts = append(volumeMounts, adapterVolumeMount)
+	}
+	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelImageAccessModeDownload {
+		downloadVolume, downloadVolumeMount := utils.ConfigDownloadVolume(workspaceObj.Name)
+		volumes = append(volumes, downloadVolume)
+		volumeMounts = append(volumeMounts, downloadVolumeMount)
 	}
 
 	// inference command

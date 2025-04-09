@@ -1,0 +1,17 @@
+apiVersion: kaito.sh/v1alpha1
+kind: Workspace
+metadata:
+  name: workspace-llama-3-3-70b-instruct
+resource:
+  instanceType: "Standard_NC96ads_A100_v4"
+  count: 1
+  labelSelector:
+    matchLabels:
+      kubernetes.azure.com/accelerator: nvidia
+inference:
+  preset:
+    name: "llama-3.3-70b-instruct"
+    accessMode: download
+    presetOptions:
+      storageClassName: managed-premium
+      modelAccessSecret: hugging-face-hub-token

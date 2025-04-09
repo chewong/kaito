@@ -55,11 +55,17 @@ func (*testModel) GetTuningParameters() *model.PresetParam {
 		PerGPUMemoryRequirement:   perGPUMemoryRequirement,
 	}
 }
+func (*testModel) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*testModel) SupportDistributedInference() bool {
 	return false
 }
 func (*testModel) SupportTuning() bool {
 	return true
+}
+func (*testModel) SupportDownload() bool {
+	return false
 }
 
 type testModelStatic struct{}
@@ -78,11 +84,17 @@ func (*testModelStatic) GetTuningParameters() *model.PresetParam {
 		PerGPUMemoryRequirement:   "16Gi",
 	}
 }
+func (*testModelStatic) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*testModelStatic) SupportDistributedInference() bool {
 	return false
 }
 func (*testModelStatic) SupportTuning() bool {
 	return true
+}
+func (*testModelStatic) SupportDownload() bool {
+	return false
 }
 
 type testModelPrivate struct{}
@@ -103,11 +115,17 @@ func (*testModelPrivate) GetTuningParameters() *model.PresetParam {
 		PerGPUMemoryRequirement:   perGPUMemoryRequirement,
 	}
 }
+func (*testModelPrivate) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*testModelPrivate) SupportDistributedInference() bool {
 	return false
 }
 func (*testModelPrivate) SupportTuning() bool {
 	return true
+}
+func (*testModelPrivate) SupportDownload() bool {
+	return false
 }
 
 func RegisterValidationTestModels() {

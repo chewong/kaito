@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	ModelImageAccessModePublic  ModelImageAccessMode = "public"
-	ModelImageAccessModePrivate ModelImageAccessMode = "private"
+	ModelImageAccessModePublic   ModelImageAccessMode = "public"
+	ModelImageAccessModePrivate  ModelImageAccessMode = "private"
+	ModelImageAccessModeDownload ModelImageAccessMode = "download"
 )
 
 // ResourceSpec describes the resource requirement of running the workload.
@@ -41,7 +42,7 @@ type ResourceSpec struct {
 
 type ModelName string
 
-// +kubebuilder:validation:Enum=public;private
+// +kubebuilder:validation:Enum=public;private;download
 type ModelImageAccessMode string
 
 type PresetMeta struct {
@@ -50,6 +51,8 @@ type PresetMeta struct {
 	// AccessMode specifies whether the containerized model image is accessible via public registry
 	// or private registry. This field defaults to "public" if not specified.
 	// If this field is "private", user needs to provide the private image information in PresetOptions.
+	// If this field is "download", a Kubernetes Job will be created prior to the inference workload to
+	// download cache the model weights to a shared volume.
 	// +kubebuilder:default:="public"
 	// +optional
 	AccessMode ModelImageAccessMode `json:"accessMode,omitempty"`
@@ -62,6 +65,13 @@ type PresetOptions struct {
 	// ImagePullSecrets is a list of secret names in the same namespace used for pulling the model image.
 	// +optional
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+	// StorageClassName is the name of the storage class used for any shared volume.
+	// +optional
+	StorageClassName string `json:"storageClassName,omitempty"`
+	// ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
+	// information that is needed for pulling the private model image.
+	// +optional
+	ModelAccessSecret string `json:"modelAccessSecret,omitempty"`
 }
 
 // PresetSpec provides the information for rendering preset configurations to run the model inference service.

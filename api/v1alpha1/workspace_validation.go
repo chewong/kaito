@@ -180,6 +180,8 @@ func (r *TuningSpec) validateCreate(ctx context.Context, workspaceNamespace stri
 		errs = errs.Also(apis.ErrMissingField("Preset"))
 	} else if presetName := string(r.Preset.Name); !plugin.IsValidPreset(presetName) {
 		errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("Unsupported tuning preset name %s", presetName), "presetName"))
+	} else if r.Preset.PresetMeta.AccessMode == ModelImageAccessModeDownload {
+		errs = errs.Also(apis.ErrGeneric("Download access mode is not supported for tuning preset"))
 	}
 	return errs
 }
@@ -438,16 +440,33 @@ func (i *InferenceSpec) validateCreate(ctx context.Context, namespace string) (e
 			// Need to return here. Otherwise, a panic will be hit when doing following checks.
 			return errs
 		}
+
+		model := plugin.KaitoModelRegister.MustGet(presetName)
 		// Validate private preset has private image specified
-		if plugin.KaitoModelRegister.MustGet(string(i.Preset.Name)).GetInferenceParameters().ImageAccessMode == string(ModelImageAccessModePrivate) &&
+		if model.GetInferenceParameters().ImageAccessMode == string(ModelImageAccessModePrivate) &&
 			i.Preset.PresetMeta.AccessMode != ModelImageAccessModePrivate {
 			errs = errs.Also(apis.ErrGeneric("This preset only supports private AccessMode, AccessMode must be private to continue"))
+		}
+		if model.GetInferenceParameters().ImageAccessMode == string(ModelImageAccessModeDownload) &&
+			i.Preset.PresetMeta.AccessMode != ModelImageAccessModeDownload {
+			errs = errs.Also(apis.ErrGeneric("This preset only supports download AccessMode, AccessMode must be download to continue"))
 		}
 		// Additional validations for Preset
 		if i.Preset.PresetMeta.AccessMode == ModelImageAccessModePrivate && i.Preset.PresetOptions.Image == "" {
 			errs = errs.Also(apis.ErrGeneric("When AccessMode is private, an image must be provided in PresetOptions"))
 		}
-		// Note: we don't enforce private access mode to have image secrets, in case anonymous pulling is enabled
+		// Note: we don't enforce private access mode to have image secrets, in case anonymous pulling is enabled.
+
+		if i.Preset.PresetMeta.AccessMode == ModelImageAccessModeDownload {
+			if i.Preset.PresetOptions.StorageClassName == "" {
+				errs = errs.Also(apis.ErrGeneric("When AccessMode is download, storageClassName must be provided in PresetOptions"))
+			}
+			// Validate storage class existance
+
+			// if i.Preset.PresetOptions.ModelAccessSecret != "" {
+			// 	errs = errs.Also(i.validateModelAccessSecret(ctx, namespace))
+			// }
+		}
 	}
 	if len(i.Adapters) > MaxAdaptersNumber {
 		errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Number of Adapters exceeds the maximum limit, maximum of %s allowed", strconv.Itoa(MaxAdaptersNumber))))
@@ -486,6 +505,30 @@ func (i *InferenceSpec) validateConfigMap(ctx context.Context, namespace string)
 	_, ok := cm.Data["inference_config.yaml"]
 	if !ok {
 		return apis.ErrMissingField("inference_config.yaml in ConfigMap")
+	}
+
+	return errs
+}
+
+func (i *InferenceSpec) validateModelAccessSecret(ctx context.Context, namespace string) (errs *apis.FieldError) {
+	var secret corev1.Secret
+	if k8sclient.Client == nil {
+		errs = errs.Also(apis.ErrGeneric("Failed to obtain client from context.Context"))
+		return errs
+	}
+	err := k8sclient.Client.Get(ctx, client.ObjectKey{Name: i.Preset.PresetOptions.ModelAccessSecret, Namespace: namespace}, &secret)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Secret '%s' specified in 'modelAccessSecret' not found in namespace '%s'", i.Preset.PresetOptions.ModelAccessSecret, namespace), "modelAccessSecret"))
+		} else {
+			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Failed to get Secret '%s' in namespace '%s': %v", i.Preset.PresetOptions.ModelAccessSecret, namespace, err), "modelAccessSecret"))
+		}
+		return errs
+	}
+
+	_, ok := secret.Data["HUGGING_FACE_HUB_TOKEN"]
+	if !ok {
+		errs = errs.Also(apis.ErrMissingField("HUGGING_FACE_HUB_TOKEN in modelAccessSecret"))
 	}
 
 	return errs

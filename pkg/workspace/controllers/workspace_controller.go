@@ -42,6 +42,7 @@ import (
 	"github.com/kaito-project/kaito/pkg/utils/nodeclaim"
 	"github.com/kaito-project/kaito/pkg/utils/plugin"
 	"github.com/kaito-project/kaito/pkg/utils/resources"
+	"github.com/kaito-project/kaito/pkg/workspace/download"
 	"github.com/kaito-project/kaito/pkg/workspace/inference"
 	"github.com/kaito-project/kaito/pkg/workspace/manifests"
 	"github.com/kaito-project/kaito/pkg/workspace/tuning"
@@ -169,6 +170,14 @@ func (c *WorkspaceReconciler) addOrUpdateWorkspace(ctx context.Context, wObj *ka
 			return reconcile.Result{}, err
 		}
 	} else if wObj.Inference != nil {
+		if err := c.applyDownload(ctx, wObj); err != nil {
+			if updateErr := c.updateStatusConditionIfNotMatch(ctx, wObj, kaitov1beta1.WorkspaceConditionTypeSucceeded, metav1.ConditionFalse,
+				"workspaceFailed", err.Error()); updateErr != nil {
+				klog.ErrorS(updateErr, "failed to update workspace status", "workspace", klog.KObj(wObj))
+				return reconcile.Result{}, updateErr
+			}
+			return reconcile.Result{}, err
+		}
 		if err := c.ensureService(ctx, wObj); err != nil {
 			if updateErr := c.updateStatusConditionIfNotMatch(ctx, wObj, kaitov1beta1.WorkspaceConditionTypeSucceeded, metav1.ConditionFalse,
 				"workspaceFailed", err.Error()); updateErr != nil {
@@ -450,9 +459,6 @@ func (c *WorkspaceReconciler) createAndValidateNode(ctx context.Context, wObj *k
 		nodeOSDiskSize = plugin.KaitoModelRegister.MustGet(presetName).
 			GetInferenceParameters().DiskStorageRequirement
 	}
-	if nodeOSDiskSize == "" {
-		nodeOSDiskSize = "0" // The default OS size is used
-	}
 
 	return c.CreateNodeClaim(ctx, wObj, nodeOSDiskSize)
 }
@@ -532,6 +538,13 @@ func getPresetName(wObj *kaitov1beta1.Workspace) string {
 	}
 	if wObj.Tuning != nil && wObj.Tuning.Preset != nil {
 		return string(wObj.Tuning.Preset.Name)
+	}
+	return ""
+}
+
+func getPresetAccessMode(wObj *kaitov1beta1.Workspace) string {
+	if wObj.Inference != nil && wObj.Inference.Preset != nil {
+		return string(wObj.Inference.Preset.AccessMode)
 	}
 	return ""
 }
@@ -743,6 +756,65 @@ func (c *WorkspaceReconciler) applyInference(ctx context.Context, wObj *kaitov1b
 	return nil
 }
 
+func (c *WorkspaceReconciler) applyDownload(ctx context.Context, wObj *kaitov1beta1.Workspace) error {
+	presetName := getPresetName(wObj)
+	if presetName == "" {
+		return nil
+	}
+
+	model := plugin.KaitoModelRegister.MustGet(presetName)
+	if !model.SupportDownload() {
+		return nil
+	}
+
+	if accessMode := getPresetAccessMode(wObj); accessMode != string(kaitov1beta1.ModelImageAccessModeDownload) {
+		return nil
+	}
+
+	var err error
+	func() {
+		downloadParam := model.GetDownloadParameters()
+
+		// Ensure PVC exists for the workspace and create it if not.
+		pvc := &corev1.PersistentVolumeClaim{}
+		err = resources.GetResource(ctx, wObj.Name, wObj.Namespace, c.Client, pvc)
+
+		switch {
+		case apierrors.IsNotFound(err):
+			// Create a new PVC
+			pvc, err = download.CreatePresetDownloadPVC(ctx, wObj, c.Client)
+			if err != nil {
+				return
+			}
+		case err != nil:
+			return
+		}
+
+		job := &batchv1.Job{}
+		err = resources.GetResource(ctx, wObj.Name, wObj.Namespace, c.Client, job)
+		switch {
+		case apierrors.IsNotFound(err):
+			// Create a new job
+			job, err = download.CreatePresetDownloadJob(ctx, wObj, pvc, downloadParam, c.Client)
+			if err != nil {
+				return
+			}
+		case err != nil:
+			return
+		}
+
+		if err = resources.CheckResourceStatus(pvc, c.Client, downloadParam.PVCBoundTimeout); err != nil {
+			return
+		}
+
+		if err = resources.CheckResourceStatus(job, c.Client, downloadParam.Timeout); err != nil {
+			return
+		}
+	}()
+
+	return err
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (c *WorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c.Recorder = mgr.GetEventRecorderFor("Workspace")
@@ -760,6 +832,7 @@ func (c *WorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&batchv1.Job{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
 		Watches(&karpenterv1.NodeClaim{}, c.watchNodeClaims(), builder.WithPredicates(nodeclaim.NodeClaimPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5})
 

@@ -190,3 +190,21 @@ func ConfigAdapterVolume() (corev1.Volume, corev1.VolumeMount) {
 	}
 	return volume, volumeMount
 }
+
+func ConfigDownloadVolume(claimName string) (corev1.Volume, corev1.VolumeMount) {
+	volume := corev1.Volume{
+		Name: "weights",
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: claimName,
+				ReadOnly:  true,
+			},
+		},
+	}
+	volumeMount := corev1.VolumeMount{
+		Name:      "weights",
+		MountPath: "/workspace/weights",
+		ReadOnly:  true,
+	}
+	return volume, volumeMount
+}

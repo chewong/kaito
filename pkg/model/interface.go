@@ -14,8 +14,10 @@ import (
 type Model interface {
 	GetInferenceParameters() *PresetParam
 	GetTuningParameters() *PresetParam
+	GetDownloadParameters() *DownloadParam
 	SupportDistributedInference() bool //If true, the model workload will be a StatefulSet, using the torch elastic runtime framework.
 	SupportTuning() bool
+	SupportDownload() bool //If true, the model can be downloaded from the huggingface hub.
 }
 
 // RuntimeName is LLM runtime name.
@@ -74,6 +76,13 @@ type VLLMParam struct {
 	DistributionParams map[string]string
 	// Parameters for running the model training/inference.
 	ModelRunParams map[string]string
+}
+
+type DownloadParam struct {
+	RepoId          string        // The huggingface repo id of the model.
+	Revision        string        // An optional Git revision id which can be a branch name, a tag, or a commit hash.
+	Timeout         time.Duration // The timeout for the model to be downloaded.
+	PVCBoundTimeout time.Duration // The timeout for the PVC to be bound.
 }
 
 func (p *PresetParam) DeepCopy() *PresetParam {

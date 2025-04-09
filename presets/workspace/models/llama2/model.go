@@ -63,10 +63,16 @@ func (*llama2Text7b) GetInferenceParameters() *model.PresetParam {
 func (*llama2Text7b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
 }
+func (*llama2Text7b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama2Text7b) SupportDistributedInference() bool {
 	return false
 }
 func (*llama2Text7b) SupportTuning() bool {
+	return false
+}
+func (*llama2Text7b) SupportDownload() bool {
 	return false
 }
 
@@ -99,10 +105,16 @@ func (*llama2Text13b) GetInferenceParameters() *model.PresetParam {
 func (*llama2Text13b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
 }
+func (*llama2Text13b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama2Text13b) SupportDistributedInference() bool {
 	return true
 }
 func (*llama2Text13b) SupportTuning() bool {
+	return false
+}
+func (*llama2Text13b) SupportDownload() bool {
 	return false
 }
 
@@ -135,9 +147,15 @@ func (*llama2Text70b) GetInferenceParameters() *model.PresetParam {
 func (*llama2Text70b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
 }
+func (*llama2Text70b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama2Text70b) SupportDistributedInference() bool {
 	return true
 }
 func (*llama2Text70b) SupportTuning() bool {
+	return false
+}
+func (*llama2Text70b) SupportDownload() bool {
 	return false
 }

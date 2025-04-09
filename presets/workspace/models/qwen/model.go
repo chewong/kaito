@@ -92,11 +92,18 @@ func (*qwen2_5Coder7BInstruct) GetTuningParameters() *model.PresetParam {
 	}
 }
 
+func (*qwen2_5Coder7BInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
+
 func (*qwen2_5Coder7BInstruct) SupportDistributedInference() bool {
 	return false
 }
 func (*qwen2_5Coder7BInstruct) SupportTuning() bool {
 	return true
+}
+func (*qwen2_5Coder7BInstruct) SupportDownload() bool {
+	return false
 }
 
 var qwen2_5coder32bInst qwen2_5Coder32BInstruct
@@ -147,9 +154,16 @@ func (*qwen2_5Coder32BInstruct) GetTuningParameters() *model.PresetParam {
 	}
 }
 
+func (*qwen2_5Coder32BInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
+
 func (*qwen2_5Coder32BInstruct) SupportDistributedInference() bool {
 	return false
 }
 func (*qwen2_5Coder32BInstruct) SupportTuning() bool {
 	return true
+}
+func (*qwen2_5Coder32BInstruct) SupportDownload() bool {
+	return false
 }

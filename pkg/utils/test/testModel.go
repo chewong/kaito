@@ -34,11 +34,17 @@ func (*baseTestModel) GetTuningParameters() *model.PresetParam {
 		ReadinessTimeout:    time.Duration(30) * time.Minute,
 	}
 }
+func (*baseTestModel) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*baseTestModel) SupportDistributedInference() bool {
 	return true
 }
 func (*baseTestModel) SupportTuning() bool {
 	return true
+}
+func (*baseTestModel) SupportDownload() bool {
+	return false
 }
 
 type testModel struct {

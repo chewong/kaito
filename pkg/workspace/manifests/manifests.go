@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -465,6 +466,81 @@ func GenerateDeploymentManifestWithPodTemplate(ctx context.Context, workspaceObj
 			Replicas: lo.ToPtr(int32(*workspaceObj.Resource.Count)),
 			Selector: labelselector,
 			Template: *templateCopy,
+		},
+	}
+}
+
+func GeneratePVCManifest(workspaceObj *kaitov1beta1.Workspace, storageClassName string, capacity resource.Quantity) *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      workspaceObj.Name,
+			Namespace: workspaceObj.Namespace,
+			Labels:    map[string]string{kaitov1beta1.LabelWorkspaceName: workspaceObj.Name},
+			OwnerReferences: []v1.OwnerReference{
+				{
+					APIVersion: kaitov1beta1.GroupVersion.String(),
+					Kind:       "Workspace",
+					UID:        workspaceObj.UID,
+					Name:       workspaceObj.Name,
+					Controller: &controller,
+				},
+			},
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			// ReadWriteOnce for model weights download, ReadOnlyMany for model weights read
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce, corev1.ReadOnlyMany},
+			StorageClassName: ptr.To(storageClassName),
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: capacity,
+				},
+			},
+		},
+	}
+}
+
+// TODO(chewong): use a different name since it conflicts with tuning jobs
+func GenerateDownloadJob(ctx context.Context, wObj *kaitov1beta1.Workspace, imageName string,
+	commands []string, tolerations []corev1.Toleration, volumes []corev1.Volume,
+	volumeMounts []corev1.VolumeMount, envVars []corev1.EnvVar) *batchv1.Job {
+	labels := map[string]string{
+		kaitov1beta1.LabelWorkspaceName: wObj.Name,
+	}
+	containers := []corev1.Container{
+		{
+			Name:         wObj.Name,
+			Image:        imageName,
+			Command:      commands,
+			Env:          envVars,
+			VolumeMounts: volumeMounts,
+		},
+	}
+	return &batchv1.Job{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      wObj.Name,
+			Namespace: wObj.Namespace,
+			Labels:    labels,
+			OwnerReferences: []v1.OwnerReference{
+				{
+					APIVersion: kaitov1beta1.GroupVersion.String(),
+					Kind:       "Workspace",
+					Name:       wObj.Name,
+					UID:        wObj.UID,
+					Controller: &controller,
+				},
+			},
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers:    containers,
+					RestartPolicy: corev1.RestartPolicyNever,
+					Volumes:       volumes,
+				},
+			},
 		},
 	}
 }

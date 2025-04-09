@@ -111,12 +111,17 @@ func (*falcon7b) GetTuningParameters() *model.PresetParam {
 		TuningPerGPUMemoryRequirement: map[string]int{"qlora": 16},
 	}
 }
-
+func (*falcon7b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*falcon7b) SupportDistributedInference() bool {
 	return false
 }
 func (*falcon7b) SupportTuning() bool {
 	return true
+}
+func (*falcon7b) SupportDownload() bool {
+	return false
 }
 
 var falconB falcon7bInst
@@ -157,10 +162,16 @@ func (*falcon7bInst) GetInferenceParameters() *model.PresetParam {
 func (*falcon7bInst) GetTuningParameters() *model.PresetParam {
 	return nil // It is not recommended/ideal to further fine-tune instruct models - Already been fine-tuned
 }
+func (*falcon7bInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*falcon7bInst) SupportDistributedInference() bool {
 	return false
 }
 func (*falcon7bInst) SupportTuning() bool {
+	return false
+}
+func (*falcon7bInst) SupportDownload() bool {
 	return false
 }
 
@@ -212,11 +223,17 @@ func (*falcon40b) GetTuningParameters() *model.PresetParam {
 		Tag:              PresetFalconTagMap["Falcon40B"],
 	}
 }
+func (*falcon40b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*falcon40b) SupportDistributedInference() bool {
 	return false
 }
 func (*falcon40b) SupportTuning() bool {
 	return true
+}
+func (*falcon40b) SupportDownload() bool {
+	return false
 }
 
 var falconD falcon40bInst
@@ -251,9 +268,15 @@ func (*falcon40bInst) GetInferenceParameters() *model.PresetParam {
 func (*falcon40bInst) GetTuningParameters() *model.PresetParam {
 	return nil // It is not recommended/ideal to further fine-tune instruct models - Already been fine-tuned
 }
+func (*falcon40bInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*falcon40bInst) SupportDistributedInference() bool {
 	return false
 }
 func (*falcon40bInst) SupportTuning() bool {
+	return false
+}
+func (*falcon40bInst) SupportDownload() bool {
 	return false
 }

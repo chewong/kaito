@@ -109,9 +109,12 @@ spec:
                       AccessMode specifies whether the containerized model image is accessible via public registry
                       or private registry. This field defaults to "public" if not specified.
                       If this field is "private", user needs to provide the private image information in PresetOptions.
+                      If this field is "download", a Kubernetes Job will be created prior to the inference workload to
+                      download cache the model weights to a shared volume.
                     enum:
                     - public
                     - private
+                    - download
                     type: string
                   name:
                     description: Name of the supported models with preset configurations.
@@ -128,6 +131,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      modelAccessSecret:
+                        description: |-
+                          ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
+                          information that is needed for pulling the private model image.
+                        type: string
+                      storageClassName:
+                        description: StorageClassName is the name of the storage class
+                          used for any shared volume.
+                        type: string
                     type: object
                 required:
                 - name
@@ -371,9 +383,12 @@ spec:
                       AccessMode specifies whether the containerized model image is accessible via public registry
                       or private registry. This field defaults to "public" if not specified.
                       If this field is "private", user needs to provide the private image information in PresetOptions.
+                      If this field is "download", a Kubernetes Job will be created prior to the inference workload to
+                      download cache the model weights to a shared volume.
                     enum:
                     - public
                     - private
+                    - download
                     type: string
                   name:
                     description: Name of the supported models with preset configurations.
@@ -390,6 +405,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      modelAccessSecret:
+                        description: |-
+                          ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
+                          information that is needed for pulling the private model image.
+                        type: string
+                      storageClassName:
+                        description: StorageClassName is the name of the storage class
+                          used for any shared volume.
+                        type: string
                     type: object
                 required:
                 - name
@@ -493,9 +517,12 @@ spec:
                       AccessMode specifies whether the containerized model image is accessible via public registry
                       or private registry. This field defaults to "public" if not specified.
                       If this field is "private", user needs to provide the private image information in PresetOptions.
+                      If this field is "download", a Kubernetes Job will be created prior to the inference workload to
+                      download cache the model weights to a shared volume.
                     enum:
                     - public
                     - private
+                    - download
                     type: string
                   name:
                     description: Name of the supported models with preset configurations.
@@ -512,6 +539,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      modelAccessSecret:
+                        description: |-
+                          ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
+                          information that is needed for pulling the private model image.
+                        type: string
+                      storageClassName:
+                        description: StorageClassName is the name of the storage class
+                          used for any shared volume.
+                        type: string
                     type: object
                 required:
                 - name
@@ -755,9 +791,12 @@ spec:
                       AccessMode specifies whether the containerized model image is accessible via public registry
                       or private registry. This field defaults to "public" if not specified.
                       If this field is "private", user needs to provide the private image information in PresetOptions.
+                      If this field is "download", a Kubernetes Job will be created prior to the inference workload to
+                      download cache the model weights to a shared volume.
                     enum:
                     - public
                     - private
+                    - download
                     type: string
                   name:
                     description: Name of the supported models with preset configurations.
@@ -774,6 +813,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      modelAccessSecret:
+                        description: |-
+                          ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
+                          information that is needed for pulling the private model image.
+                        type: string
+                      storageClassName:
+                        description: StorageClassName is the name of the storage class
+                          used for any shared volume.
+                        type: string
                     type: object
                 required:
                 - name
