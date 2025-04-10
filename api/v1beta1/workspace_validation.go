@@ -458,12 +458,10 @@ func (i *InferenceSpec) validateCreate(ctx context.Context, namespace string) (e
 		// Note: we don't enforce private access mode to have image secrets, in case anonymous pulling is enabled.
 
 		if i.Preset.PresetMeta.AccessMode == ModelImageAccessModeDownload {
-			if i.Preset.PresetOptions.StorageClassName == "" {
-				errs = errs.Also(apis.ErrGeneric("When AccessMode is download, storageClassName must be provided in PresetOptions"))
+			if i.Preset.DownloadOptions.VolumeClaimTemplate == nil {
+				errs = errs.Also(apis.ErrGeneric("When AccessMode is download, volumeClaimTemplate must be provided"))
 			}
-			// if i.Preset.PresetOptions.ModelAccessSecret != "" {
-			// 	errs = errs.Also(i.validateModelAccessSecret(ctx, namespace))
-			// }
+			// Note: we don't enforce download access mode to have model access secret, in case anonymous pulling is enabled.
 		}
 	}
 	if len(i.Adapters) > MaxAdaptersNumber {
@@ -503,30 +501,6 @@ func (i *InferenceSpec) validateConfigMap(ctx context.Context, namespace string)
 	_, ok := cm.Data["inference_config.yaml"]
 	if !ok {
 		return apis.ErrMissingField("inference_config.yaml in ConfigMap")
-	}
-
-	return errs
-}
-
-func (i *InferenceSpec) validateModelAccessSecret(ctx context.Context, namespace string) (errs *apis.FieldError) {
-	var secret corev1.Secret
-	if k8sclient.Client == nil {
-		errs = errs.Also(apis.ErrGeneric("Failed to obtain client from context.Context"))
-		return errs
-	}
-	err := k8sclient.Client.Get(ctx, client.ObjectKey{Name: i.Preset.PresetOptions.ModelAccessSecret, Namespace: namespace}, &secret)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Secret '%s' specified in 'modelAccessSecret' not found in namespace '%s'", i.Preset.PresetOptions.ModelAccessSecret, namespace), "modelAccessSecret"))
-		} else {
-			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Failed to get Secret '%s' in namespace '%s': %v", i.Preset.PresetOptions.ModelAccessSecret, namespace, err), "modelAccessSecret"))
-		}
-		return errs
-	}
-
-	_, ok := secret.Data["HUGGING_FACE_HUB_TOKEN"]
-	if !ok {
-		errs = errs.Also(apis.ErrMissingField("HUGGING_FACE_HUB_TOKEN in modelAccessSecret"))
 	}
 
 	return errs

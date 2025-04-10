@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -470,33 +469,32 @@ func GenerateDeploymentManifestWithPodTemplate(ctx context.Context, workspaceObj
 	}
 }
 
-func GeneratePVCManifest(workspaceObj *kaitov1beta1.Workspace, storageClassName string, capacity resource.Quantity) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      workspaceObj.Name,
-			Namespace: workspaceObj.Namespace,
-			Labels:    map[string]string{kaitov1beta1.LabelWorkspaceName: workspaceObj.Name},
-			OwnerReferences: []v1.OwnerReference{
-				{
-					APIVersion: kaitov1beta1.GroupVersion.String(),
-					Kind:       "Workspace",
-					UID:        workspaceObj.UID,
-					Name:       workspaceObj.Name,
-					Controller: &controller,
-				},
-			},
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			// ReadWriteOnce for model weights download, ReadOnlyMany for model weights read
-			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce, corev1.ReadOnlyMany},
-			StorageClassName: ptr.To(storageClassName),
-			Resources: corev1.VolumeResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: capacity,
-				},
-			},
-		},
+func GeneratePVCManifest(workspaceObj *kaitov1beta1.Workspace) *corev1.PersistentVolumeClaim {
+	pvc := workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate
+	if pvc.Name == "" {
+		pvc.SetName(workspaceObj.Name)
 	}
+	if pvc.Namespace == "" {
+		pvc.SetNamespace(workspaceObj.Namespace)
+	}
+
+	labels := pvc.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[kaitov1beta1.LabelWorkspaceName] = workspaceObj.Name
+	pvc.SetLabels(labels)
+
+	ownerReferences := append(pvc.OwnerReferences, v1.OwnerReference{
+		APIVersion: kaitov1beta1.GroupVersion.String(),
+		Kind:       "Workspace",
+		UID:        workspaceObj.UID,
+		Name:       workspaceObj.Name,
+		Controller: &controller,
+	})
+	pvc.SetOwnerReferences(ownerReferences)
+
+	return pvc
 }
 
 // TODO(chewong): use a different name since it conflicts with tuning jobs

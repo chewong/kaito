@@ -65,13 +65,16 @@ type PresetOptions struct {
 	// ImagePullSecrets is a list of secret names in the same namespace used for pulling the model image.
 	// +optional
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
-	// StorageClassName is the name of the storage class used for any shared volume.
+}
+
+type DownloadOptions struct {
+	// Env specifies the environment variables used to access the model image.
 	// +optional
-	StorageClassName string `json:"storageClassName,omitempty"`
-	// ModelAccessSecret is the name of the secret in the same namespace that contains the authentication
-	// information that is needed for pulling the private model image.
+	Env []v1.EnvVar `json:"env,omitempty"`
+
+	// VolumeClaimTemplate is the template used to create a PersistentVolumeClaim for the shared volume.
 	// +optional
-	ModelAccessSecret string `json:"modelAccessSecret,omitempty"`
+	VolumeClaimTemplate *v1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
 }
 
 // PresetSpec provides the information for rendering preset configurations to run the model inference service.
@@ -79,6 +82,8 @@ type PresetSpec struct {
 	PresetMeta `json:",inline"`
 	// +optional
 	PresetOptions `json:"presetOptions,omitempty"`
+	// +optional
+	DownloadOptions `json:"downloadOptions,omitempty"`
 }
 
 type InferenceSpec struct {

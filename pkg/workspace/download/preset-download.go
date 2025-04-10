@@ -7,14 +7,12 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kaitov1beta1 "github.com/kaito-project/kaito/api/v1beta1"
 	"github.com/kaito-project/kaito/pkg/model"
 	"github.com/kaito-project/kaito/pkg/utils"
 	"github.com/kaito-project/kaito/pkg/utils/consts"
-	"github.com/kaito-project/kaito/pkg/utils/plugin"
 	"github.com/kaito-project/kaito/pkg/utils/resources"
 	"github.com/kaito-project/kaito/pkg/workspace/manifests"
 )
@@ -42,8 +40,7 @@ var (
 )
 
 func CreatePresetDownloadPVC(ctx context.Context, workspaceObj *kaitov1beta1.Workspace, kubeClient client.Client) (*corev1.PersistentVolumeClaim, error) {
-	storageClassName, capacity := getModelStorageClassName(workspaceObj), getModelDiskStorageRequirement(workspaceObj)
-	pvcObj := manifests.GeneratePVCManifest(workspaceObj, storageClassName, resource.MustParse(capacity))
+	pvcObj := manifests.GeneratePVCManifest(workspaceObj)
 	err := resources.CreateResource(ctx, pvcObj, kubeClient)
 	if client.IgnoreAlreadyExists(err) != nil {
 		return nil, err
@@ -70,50 +67,12 @@ func CreatePresetDownloadJob(ctx context.Context, workspaceObj *kaitov1beta1.Wor
 		},
 	}
 
-	envVars := []corev1.EnvVar{}
-	modelAccessSecret := getModelAccessSecret(workspaceObj)
-	if modelAccessSecret != "" {
-		envVars = append(envVars, corev1.EnvVar{
-			Name: huggingFaceHubToken,
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: getModelAccessSecret(workspaceObj),
-					},
-					Key: huggingFaceHubToken,
-				},
-			},
-		})
-	}
-
-	jobObj := manifests.GenerateDownloadJob(ctx, workspaceObj, pythonImage, commands, tolerations, volumes, volumeMounts, envVars)
+	jobObj := manifests.GenerateDownloadJob(ctx, workspaceObj, pythonImage, commands, tolerations, volumes, volumeMounts, workspaceObj.Inference.Preset.Env)
 	err := resources.CreateResource(ctx, jobObj, kubeClient)
 	if client.IgnoreAlreadyExists(err) != nil {
 		return nil, err
 	}
 	return jobObj, nil
-}
-
-func getModelStorageClassName(wObj *kaitov1beta1.Workspace) string {
-	if wObj.Inference != nil && wObj.Inference.Preset != nil {
-		return wObj.Inference.Preset.StorageClassName
-	}
-	return ""
-}
-
-func getModelDiskStorageRequirement(wObj *kaitov1beta1.Workspace) string {
-	if wObj.Inference != nil && wObj.Inference.Preset != nil {
-		presetName := string(wObj.Inference.Preset.Name)
-		return plugin.KaitoModelRegister.MustGet(presetName).GetInferenceParameters().DiskStorageRequirement
-	}
-	return ""
-}
-
-func getModelAccessSecret(wObj *kaitov1beta1.Workspace) string {
-	if wObj.Inference != nil && wObj.Inference.Preset != nil {
-		return wObj.Inference.Preset.ModelAccessSecret
-	}
-	return ""
 }
 
 func prepareDownloadParameters(downloadObj *model.DownloadParam) []string {

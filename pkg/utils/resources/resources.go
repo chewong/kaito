@@ -95,9 +95,19 @@ func CheckResourceStatus(obj client.Object, kubeClient client.Client, timeoutDur
 					klog.ErrorS(fmt.Errorf("job failed"), "name", k8sResource.Name, "failed count", k8sResource.Status.Failed)
 					return fmt.Errorf("job %s has failed %d pods", k8sResource.Name, k8sResource.Status.Failed)
 				}
-				if k8sResource.Status.Succeeded > 0 || (k8sResource.Status.Ready != nil && *k8sResource.Status.Ready > 0) {
+				// if k8sResource.Status.Succeeded > 0 || (k8sResource.Status.Ready != nil && *k8sResource.Status.Ready > 0) {
+				if k8sResource.Status.Succeeded > 0 {
 					klog.InfoS("job status is active/succeeded", "name", k8sResource.Name)
 					return nil
+				}
+			case *corev1.PersistentVolumeClaim:
+				if k8sResource.Status.Phase == corev1.ClaimBound {
+					klog.InfoS("PVC status is bound", "pvc", k8sResource.Name)
+					return nil
+				}
+				if k8sResource.Status.Phase == corev1.ClaimLost {
+					klog.ErrorS(fmt.Errorf("PVC lost"), "pvc", k8sResource.Name)
+					return fmt.Errorf("PVC %s is lost", k8sResource.Name)
 				}
 			default:
 				return fmt.Errorf("unsupported resource type")

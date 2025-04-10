@@ -32,7 +32,7 @@ func (*llama3) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "LLaMa3",
 		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModeDownload),
-		DiskStorageRequirement:    "158Gi",
+		DiskStorageRequirement:    "400Gi",
 		GPUCountRequirement:       "4",
 		TotalGPUMemoryRequirement: "152Gi",
 		PerGPUMemoryRequirement:   "40Gi",
