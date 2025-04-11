@@ -100,6 +100,18 @@ func updateTorchParamsForDistributedInference(ctx context.Context, kubeClient cl
 	return nil
 }
 
+func updateVLLMParamsForDownload(wObj *v1beta1.Workspace, inferenceParams *model.PresetParam, downloadParam *model.DownloadParam) {
+	// If PVC is defined, a job has already been created to download the model.
+	// In this case, we don't need to set the model name in the VLLM parameters.
+	if wObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
+		return
+	}
+	inferenceParams.VLLM.ModelRunParams["model"] = downloadParam.RepoId
+	if downloadParam.Revision != "" {
+		inferenceParams.VLLM.ModelRunParams["revision"] = downloadParam.Revision
+	}
+}
+
 func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace, presetObj *model.PresetParam) (string, []corev1.LocalObjectReference) {
 	var imageName string
 	imagePullSecretRefs := []corev1.LocalObjectReference{}
@@ -154,6 +166,11 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		}
 	}
 
+	if inferenceParam.ImageAccessMode == string(v1beta1.ModelImageAccessModeDownload) {
+		downloadParam := model.GetDownloadParameters()
+		updateVLLMParamsForDownload(workspaceObj, inferenceParam, downloadParam)
+	}
+
 	// resource requirements
 	skuNumGPUs, err := utils.GetSKUNumGPUs(ctx, kubeClient, workspaceObj.Status.WorkerNodes,
 		workspaceObj.Resource.InstanceType, inferenceParam.GPUCountRequirement)
@@ -192,8 +209,15 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		volumes = append(volumes, adapterVolume)
 		volumeMounts = append(volumeMounts, adapterVolumeMount)
 	}
-	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelImageAccessModeDownload {
-		downloadVolume, downloadVolumeMount := utils.ConfigDownloadVolume(workspaceObj.Name)
+	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelImageAccessModeDownload &&
+		workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
+		pvc := workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate
+		pvcName := pvc.GetName()
+		// In the case of staic PVC, the PVC name will not be empty but default to workspace name if it is not specified
+		if pvcName == "" {
+			pvcName = workspaceObj.Name
+		}
+		downloadVolume, downloadVolumeMount := utils.ConfigDownloadVolume(pvcName)
 		volumes = append(volumes, downloadVolume)
 		volumeMounts = append(volumeMounts, downloadVolumeMount)
 	}

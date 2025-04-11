@@ -456,13 +456,6 @@ func (i *InferenceSpec) validateCreate(ctx context.Context, namespace string) (e
 			errs = errs.Also(apis.ErrGeneric("When AccessMode is private, an image must be provided in PresetOptions"))
 		}
 		// Note: we don't enforce private access mode to have image secrets, in case anonymous pulling is enabled.
-
-		if i.Preset.PresetMeta.AccessMode == ModelImageAccessModeDownload {
-			if i.Preset.DownloadOptions.VolumeClaimTemplate == nil {
-				errs = errs.Also(apis.ErrGeneric("When AccessMode is download, volumeClaimTemplate must be provided"))
-			}
-			// Note: we don't enforce download access mode to have model access secret, in case anonymous pulling is enabled.
-		}
 	}
 	if len(i.Adapters) > MaxAdaptersNumber {
 		errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Number of Adapters exceeds the maximum limit, maximum of %s allowed", strconv.Itoa(MaxAdaptersNumber))))

@@ -1,10 +1,9 @@
 apiVersion: kaito.sh/v1alpha1
 kind: Workspace
 metadata:
-  name: workspace-llama-3-3-70b-instruct
+  name: workspace-llama-3-3-70b-instruct-blobfuse
 resource:
-  instanceType: "Standard_NC96ads_A100_v4"
-  count: 1
+  instanceType: "Standard_NC80adis_H100_v5"
   labelSelector:
     matchLabels:
       kubernetes.azure.com/accelerator: nvidia
@@ -19,11 +18,11 @@ inference:
             secretKeyRef:
               name: hugging-face-hub-token
               key: HUGGING_FACE_HUB_TOKEN
-      volumeClaimTemplate:
-        spec:
-          storageClassName: managed-premium
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 200Gi
+      # volumeClaimTemplate:
+      #   spec:
+      #     storageClassName: azureblob-fuse-premium
+      #     accessModes:
+      #       - ReadWriteMany
+      #     resources:
+      #       requests:
+      #         storage: 500Gi

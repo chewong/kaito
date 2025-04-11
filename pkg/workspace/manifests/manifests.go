@@ -130,11 +130,12 @@ func GenerateStatefulSetManifest(ctx context.Context, workspaceObj *kaitov1beta1
 		MatchLabels: selector,
 	}
 	// Add PYTORCH_CUDA_ALLOC_CONF environment variable
+	// Disable due to https://github.com/vllm-project/vllm/issues/9046
 	envVars := []corev1.EnvVar{
-		{
-			Name:  "PYTORCH_CUDA_ALLOC_CONF",
-			Value: "expandable_segments:True",
-		},
+		// {
+		// 	Name:  "PYTORCH_CUDA_ALLOC_CONF",
+		// 	Value: "expandable_segments:True",
+		// },
 	}
 
 	ss := &appsv1.StatefulSet{
@@ -203,6 +204,7 @@ func GenerateTuningJobManifest(ctx context.Context, wObj *kaitov1beta1.Workspace
 	envVars []corev1.EnvVar) *batchv1.Job {
 	labels := map[string]string{
 		kaitov1beta1.LabelWorkspaceName: wObj.Name,
+		kaitov1beta1.LabelJobType:       string(kaitov1beta1.JobTypeTuning),
 	}
 
 	// TODO: make containers only mount the volumes they need
@@ -294,11 +296,12 @@ func GenerateDeploymentManifest(ctx context.Context, workspaceObj *kaitov1beta1.
 		MatchLabels: selector,
 	}
 	envs := []corev1.EnvVar{}
+	// Disable due to https://github.com/vllm-project/vllm/issues/9046
 	// Add PYTORCH_CUDA_ALLOC_CONF environment variable
-	envs = append(envs, corev1.EnvVar{
-		Name:  "PYTORCH_CUDA_ALLOC_CONF",
-		Value: "expandable_segments:True",
-	})
+	// envs = append(envs, corev1.EnvVar{
+	// 	Name:  "PYTORCH_CUDA_ALLOC_CONF",
+	// 	Value: "expandable_segments:True",
+	// })
 
 	pullerContainers, pullerEnvVars, pullerVolumes := GeneratePullerContainers(workspaceObj, volumeMount)
 	envs = append(envs, pullerEnvVars...)
@@ -501,8 +504,18 @@ func GeneratePVCManifest(workspaceObj *kaitov1beta1.Workspace) *corev1.Persisten
 func GenerateDownloadJob(ctx context.Context, wObj *kaitov1beta1.Workspace, imageName string,
 	commands []string, tolerations []corev1.Toleration, volumes []corev1.Volume,
 	volumeMounts []corev1.VolumeMount, envVars []corev1.EnvVar) *batchv1.Job {
+	nodeRequirements := make([]corev1.NodeSelectorRequirement, 0, len(wObj.Resource.LabelSelector.MatchLabels))
+	for key, value := range wObj.Resource.LabelSelector.MatchLabels {
+		nodeRequirements = append(nodeRequirements, corev1.NodeSelectorRequirement{
+			Key:      key,
+			Operator: corev1.NodeSelectorOpIn,
+			Values:   []string{value},
+		})
+	}
+
 	labels := map[string]string{
 		kaitov1beta1.LabelWorkspaceName: wObj.Name,
+		kaitov1beta1.LabelJobType:       string(kaitov1beta1.JobTypeDownload),
 	}
 	containers := []corev1.Container{
 		{
@@ -534,6 +547,17 @@ func GenerateDownloadJob(ctx context.Context, wObj *kaitov1beta1.Workspace, imag
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					Affinity: &corev1.Affinity{
+						NodeAffinity: &corev1.NodeAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+								NodeSelectorTerms: []corev1.NodeSelectorTerm{
+									{
+										MatchExpressions: nodeRequirements,
+									},
+								},
+							},
+						},
+					},
 					Containers:    containers,
 					RestartPolicy: corev1.RestartPolicyNever,
 					Volumes:       volumes,

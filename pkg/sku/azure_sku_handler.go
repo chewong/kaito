@@ -22,6 +22,8 @@ func NewAzureSKUHandler() *AzureSKUHandler {
 			"Standard_NC64as_T4_v3":     {SKU: "Standard_NC64as_T4_v3", GPUCount: 4, GPUMem: 64, GPUModel: "NVIDIA T4"},
 			"Standard_NC24ads_A100_v4":  {SKU: "Standard_NC24ads_A100_v4", GPUCount: 1, GPUMem: 80, GPUModel: "NVIDIA A100"},
 			"Standard_NC48ads_A100_v4":  {SKU: "Standard_NC48ads_A100_v4", GPUCount: 2, GPUMem: 160, GPUModel: "NVIDIA A100"},
+			"Standard_NC40ads_H100_v5":  {SKU: "Standard_NC40ads_H100_v5", GPUCount: 1, GPUMem: 94, GPUModel: "NVIDIA H100"},
+			"Standard_NC80adis_H100_v5": {SKU: "Standard_NC80adis_H100_v5", GPUCount: 2, GPUMem: 188, GPUModel: "NVIDIA H100"},
 			"Standard_NC96ads_A100_v4":  {SKU: "Standard_NC96ads_A100_v4", GPUCount: 4, GPUMem: 320, GPUModel: "NVIDIA A100"},
 			"Standard_ND96asr_A100_v4":  {SKU: "Standard_ND96asr_A100_v4", GPUCount: 8, GPUMem: 320, GPUModel: "NVIDIA A100"},
 			"Standard_NG32ads_V620_v1":  {SKU: "Standard_NG32ads_V620_v1", GPUCount: 1, GPUMem: 32, GPUModel: "AMD Radeon PRO V620"},

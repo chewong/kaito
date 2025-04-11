@@ -26,7 +26,6 @@ RUN echo 'tzdata tzdata/Areas select America' | debconf-set-selections && \
 RUN apt-get -qq update && \
     apt-get -qq install -y --no-install-recommends \
     curl \
-    gcc \
     libibverbs-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -35,7 +34,7 @@ COPY kaito/presets/workspace/dependencies/requirements.txt /workspace/requiremen
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    uv pip install --no-cache --system -r /workspace/requirements.txt
+    uv pip install --system -r /workspace/requirements.txt
 
 # 1. Huggingface transformers
 COPY kaito/presets/workspace/inference/${MODEL_TYPE}/inference_api.py \

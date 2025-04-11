@@ -15,6 +15,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kaitov1beta1 "github.com/kaito-project/kaito/api/v1beta1"
 	"github.com/kaito-project/kaito/pkg/utils"
 )
 
@@ -95,9 +96,16 @@ func CheckResourceStatus(obj client.Object, kubeClient client.Client, timeoutDur
 					klog.ErrorS(fmt.Errorf("job failed"), "name", k8sResource.Name, "failed count", k8sResource.Status.Failed)
 					return fmt.Errorf("job %s has failed %d pods", k8sResource.Name, k8sResource.Status.Failed)
 				}
-				// if k8sResource.Status.Succeeded > 0 || (k8sResource.Status.Ready != nil && *k8sResource.Status.Ready > 0) {
+				jobType, ok := k8sResource.Labels[kaitov1beta1.LabelJobType]
+				if !ok || jobType != string(kaitov1beta1.JobTypeDownload) {
+					if k8sResource.Status.Succeeded > 0 || (k8sResource.Status.Ready != nil && *k8sResource.Status.Ready > 0) {
+						klog.InfoS("job status is active/succeeded", "name", k8sResource.Name)
+						return nil
+					}
+				}
+				// only return if the download job is succeeded
 				if k8sResource.Status.Succeeded > 0 {
-					klog.InfoS("job status is active/succeeded", "name", k8sResource.Name)
+					klog.InfoS("job status is succeeded", "name", k8sResource.Name)
 					return nil
 				}
 			case *corev1.PersistentVolumeClaim:

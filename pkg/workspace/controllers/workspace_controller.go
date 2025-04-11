@@ -763,11 +763,14 @@ func (c *WorkspaceReconciler) applyDownload(ctx context.Context, wObj *kaitov1be
 	}
 
 	model := plugin.KaitoModelRegister.MustGet(presetName)
-	if !model.SupportDownload() {
+	if accessMode := getPresetAccessMode(wObj); accessMode != string(kaitov1beta1.ModelImageAccessModeDownload) ||
+		model.GetInferenceParameters().ImageAccessMode != string(kaitov1beta1.ModelImageAccessModeDownload) {
 		return nil
 	}
 
-	if accessMode := getPresetAccessMode(wObj); accessMode != string(kaitov1beta1.ModelImageAccessModeDownload) {
+	if wObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate == nil {
+		klog.InfoS("No volume claim template found in download options, model weights will be downloaded to local disk and will not persist across pod restarts",
+			"workspace", klog.KObj(wObj))
 		return nil
 	}
 

@@ -79,18 +79,25 @@ func prepareDownloadParameters(downloadObj *model.DownloadParam) []string {
 	// --include flag doesn't work well with equal sign (--include='*.safetensors' '*.json')
 	// so we need to use a workaround by passing the arguments with an empty value to achieve
 	// --include '*.safetensors' '*.json'
-	downloadParam := map[string]string{
-		"local-dir":                        modelWeightsFolderPath,
-		"include '*.safetensors' '*.json'": "",
+	safetensorsParams := map[string]string{
+		"local-dir":             modelWeightsFolderPath,
+		"include *.safetensors": "",
+	}
+	jsonParams := map[string]string{
+		"local-dir":      modelWeightsFolderPath,
+		"include *.json": "",
 	}
 	if downloadObj.Revision != "" {
-		downloadParam["revision"] = downloadObj.Revision
+		safetensorsParams["revision"] = downloadObj.Revision
+		jsonParams["revision"] = downloadObj.Revision
 	}
 
 	commands := []string{
 		// TODO(chewong): pin the version of huggingface-hub[cli]
 		"pip install huggingface-hub[cli]==0.30.2",
-		utils.BuildCmdStr(fmt.Sprintf(baseDownloadCommand, downloadObj.RepoId), downloadParam),
+		utils.BuildCmdStr(fmt.Sprintf(baseDownloadCommand, downloadObj.RepoId), safetensorsParams),
+		utils.BuildCmdStr(fmt.Sprintf(baseDownloadCommand, downloadObj.RepoId), jsonParams),
+		"ls -lah /workspace/weights",
 	}
 
 	// Concatenate the commands before returning

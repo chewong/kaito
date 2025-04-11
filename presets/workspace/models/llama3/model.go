@@ -32,19 +32,19 @@ func (*llama3) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "LLaMa3",
 		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModeDownload),
-		DiskStorageRequirement:    "400Gi",
-		GPUCountRequirement:       "4",
+		DiskStorageRequirement:    "152Gi",
+		GPUCountRequirement:       "2",
 		TotalGPUMemoryRequirement: "152Gi",
 		PerGPUMemoryRequirement:   "40Gi",
 		RuntimeParam: model.RuntimeParam{
 			VLLM: model.VLLMParam{
 				BaseCommand:    inference.DefaultVLLMCommand,
-				ModelName:      "Llama-3.3-70B-Instruct",
+				ModelName:      "llama-3.3-70b-instruct",
 				ModelRunParams: llama3RunParams,
 			},
 		},
 		ReadinessTimeout: time.Duration(30) * time.Minute,
-		WorldSize:        4,
+		WorldSize:        2,
 	}
 }
 

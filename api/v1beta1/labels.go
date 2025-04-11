@@ -25,6 +25,9 @@ const (
 	// LabelWorkspaceName is the label for workspace namespace.
 	LabelWorkspaceNamespace = KAITOPrefix + "workspacenamespace"
 
+	// LabelJobType is the label for job type.
+	LabelJobType = KAITOPrefix + "jobtype"
+
 	// WorkspaceRevisionAnnotation is the Annotations for revision number
 	WorkspaceRevisionAnnotation = "workspace.kaito.io/revision"
 
@@ -33,6 +36,13 @@ const (
 
 	// AnnotationBypassResourceChecks allows bypassing resource requirement checks like GPU memory.
 	AnnotationBypassResourceChecks = KAITOPrefix + "bypass-resource-checks"
+)
+
+type JobType string
+
+const (
+	JobTypeTuning   JobType = "tuning"
+	JobTypeDownload JobType = "download"
 )
 
 // GetWorkspaceRuntimeName returns the runtime name of the workspace.
