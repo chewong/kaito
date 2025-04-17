@@ -33,6 +33,7 @@ func TestGenerateStatefulSetManifest(t *testing.T) {
 			nil, //tolerations
 			nil, //volumes
 			nil, //volumeMount
+			nil, //envVars
 		)
 
 		if obj.Spec.ServiceName != fmt.Sprintf("%s-headless", workspace.Name) {
@@ -77,6 +78,8 @@ func TestGenerateDeploymentManifest(t *testing.T) {
 			nil, //tolerations
 			nil, //volumes
 			nil, //volumeMount
+			nil, //envVars
+
 		)
 
 		appSelector := map[string]string{

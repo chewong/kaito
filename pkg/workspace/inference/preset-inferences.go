@@ -41,7 +41,7 @@ var (
 				Path: ProbePath,
 			},
 		},
-		InitialDelaySeconds: 600, // 10 minutes
+		InitialDelaySeconds: 1800, // 30 minutes
 		PeriodSeconds:       10,
 	}
 
@@ -103,7 +103,20 @@ func updateTorchParamsForDistributedInference(ctx context.Context, kubeClient cl
 	return nil
 }
 
+func updateVLLMParamsForDownload(wObj *v1beta1.Workspace, inferenceParams *model.PresetParam, downloadParam *model.DownloadParam) {
+	// If PVC is defined, a job has already been created to download the model.
+	// In this case, we don't need to set the model name in the VLLM parameters.
+	if wObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
+		return
+	}
+	inferenceParams.VLLM.ModelRunParams["model"] = downloadParam.RepoId
+	if downloadParam.Revision != "" {
+		inferenceParams.VLLM.ModelRunParams["revision"] = downloadParam.Revision
+	}
+}
+
 func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace, presetObj *model.PresetParam) (string, []corev1.LocalObjectReference) {
+	var imageName string
 	imagePullSecretRefs := []corev1.LocalObjectReference{}
 	// Check if the workspace preset's access mode is private
 	if len(workspaceObj.Inference.Adapters) > 0 {
@@ -113,20 +126,23 @@ func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace,
 			}
 		}
 	}
-	if string(workspaceObj.Inference.Preset.AccessMode) == string(v1beta1.ModelImageAccessModePrivate) {
-		imageName := workspaceObj.Inference.Preset.PresetOptions.Image
-		for _, secretName := range workspaceObj.Inference.Preset.PresetOptions.ImagePullSecrets {
-			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})
-		}
-		return imageName, imagePullSecretRefs
-	} else {
-		imageName := string(workspaceObj.Inference.Preset.Name)
+
+	switch workspaceObj.Inference.Preset.AccessMode {
+	case v1beta1.ModelImageAccessModePublic:
+		imageName = string(workspaceObj.Inference.Preset.Name)
 		imageTag := presetObj.Tag
 		registryName := os.Getenv("PRESET_REGISTRY_NAME")
 		imageName = fmt.Sprintf("%s/kaito-%s:%s", registryName, imageName, imageTag)
-
-		return imageName, imagePullSecretRefs
+	case v1beta1.ModelImageAccessModePrivate:
+		imageName = workspaceObj.Inference.Preset.PresetOptions.Image
+		for _, secretName := range workspaceObj.Inference.Preset.PresetOptions.ImagePullSecrets {
+			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})
+		}
+	case v1beta1.ModelImageAccessModeDownload:
+		imageName = "ernestwong.azurecr.io/kaito/base:0.0.2"
 	}
+
+	return imageName, imagePullSecretRefs
 }
 
 func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace, revisionNum string,
@@ -151,6 +167,11 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 			klog.ErrorS(err, "failed to update torch params", "workspace", workspaceObj)
 			return nil, err
 		}
+	}
+
+	if inferenceParam.ImageAccessMode == string(v1beta1.ModelImageAccessModeDownload) {
+		downloadParam := model.GetDownloadParameters()
+		updateVLLMParamsForDownload(workspaceObj, inferenceParam, downloadParam)
 	}
 
 	// resource requirements
@@ -178,6 +199,7 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 	// additional volume
 	var volumes []corev1.Volume
 	var volumeMounts []corev1.VolumeMount
+	var envVars []corev1.EnvVar
 
 	// Add config volume mount
 	cmVolume, cmVolumeMount := utils.ConfigCMVolume(configVolume.Name)
@@ -197,6 +219,25 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		volumes = append(volumes, adapterVolume)
 		volumeMounts = append(volumeMounts, adapterVolumeMount)
 	}
+	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelImageAccessModeDownload {
+		// Mount the model weights volume to the inference container if the PVC is defined
+		if workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
+			pvc := workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate
+			pvcName := pvc.GetName()
+			// In the case of static provision, the PVC name will not be empty but default
+			// to workspace name if it is not specified
+			if pvcName == "" {
+				pvcName = workspaceObj.Name
+			}
+			downloadVolume, downloadVolumeMount := utils.ConfigDownloadVolume(pvcName)
+			volumes = append(volumes, downloadVolume)
+			volumeMounts = append(volumeMounts, downloadVolumeMount)
+		} else {
+			// No PVC provided - we are downloading the model at runtime so we need to set any
+			// environment variables for authentication
+			envVars = append(envVars, workspaceObj.Inference.Preset.DownloadOptions.Env...)
+		}
+	}
 
 	// inference command
 	runtimeName := v1beta1.GetWorkspaceRuntimeName(workspaceObj)
@@ -215,10 +256,10 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 	var depObj client.Object
 	if model.SupportDistributedInference() {
 		depObj = manifests.GenerateStatefulSetManifest(ctx, workspaceObj, image, imagePullSecrets, *workspaceObj.Resource.Count, commands,
-			containerPorts, livenessProbe, readinessProbe, resourceReq, tolerations, volumes, volumeMounts)
+			containerPorts, livenessProbe, readinessProbe, resourceReq, tolerations, volumes, volumeMounts, envVars)
 	} else {
 		depObj = manifests.GenerateDeploymentManifest(ctx, workspaceObj, revisionNum, image, imagePullSecrets, *workspaceObj.Resource.Count, commands,
-			containerPorts, livenessProbe, readinessProbe, resourceReq, tolerations, volumes, volumeMounts)
+			containerPorts, livenessProbe, readinessProbe, resourceReq, tolerations, volumes, volumeMounts, envVars)
 	}
 	err = resources.CreateResource(ctx, depObj, kubeClient)
 	if client.IgnoreAlreadyExists(err) != nil {

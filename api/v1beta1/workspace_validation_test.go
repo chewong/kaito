@@ -55,6 +55,9 @@ func (*testModel) GetTuningParameters() *model.PresetParam {
 		PerGPUMemoryRequirement:   perGPUMemoryRequirement,
 	}
 }
+func (*testModel) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*testModel) SupportDistributedInference() bool {
 	return false
 }
@@ -77,6 +80,9 @@ func (*testModelStatic) GetTuningParameters() *model.PresetParam {
 		TotalGPUMemoryRequirement: "16Gi",
 		PerGPUMemoryRequirement:   "16Gi",
 	}
+}
+func (*testModelStatic) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*testModelStatic) SupportDistributedInference() bool {
 	return false
@@ -102,6 +108,9 @@ func (*testModelPrivate) GetTuningParameters() *model.PresetParam {
 		TotalGPUMemoryRequirement: totalGPUMemoryRequirement,
 		PerGPUMemoryRequirement:   perGPUMemoryRequirement,
 	}
+}
+func (*testModelPrivate) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*testModelPrivate) SupportDistributedInference() bool {
 	return false

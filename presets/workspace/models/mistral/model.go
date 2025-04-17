@@ -93,7 +93,9 @@ func (*mistral7b) GetTuningParameters() *model.PresetParam {
 		Tag:              PresetMistralTagMap["Mistral7B"],
 	}
 }
-
+func (*mistral7b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*mistral7b) SupportDistributedInference() bool {
 	return false
 }
@@ -133,6 +135,9 @@ func (*mistral7bInst) GetInferenceParameters() *model.PresetParam {
 }
 func (*mistral7bInst) GetTuningParameters() *model.PresetParam {
 	return nil // It is not recommended/ideal to further fine-tune instruct models - Already been fine-tuned
+}
+func (*mistral7bInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*mistral7bInst) SupportDistributedInference() bool {
 	return false

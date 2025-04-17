@@ -63,6 +63,9 @@ func (*llama2Chat7b) GetInferenceParameters() *model.PresetParam {
 func (*llama2Chat7b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
 }
+func (*llama2Chat7b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama2Chat7b) SupportDistributedInference() bool {
 	return false
 }
@@ -100,6 +103,9 @@ func (*llama2Chat13b) GetInferenceParameters() *model.PresetParam {
 func (*llama2Chat13b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
 }
+func (*llama2Chat13b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama2Chat13b) SupportDistributedInference() bool {
 	return true
 }
@@ -116,7 +122,7 @@ func (*llama2Chat70b) GetInferenceParameters() *model.PresetParam {
 		ModelFamilyName:           "LLaMa2",
 		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePrivate),
 		DiskStorageRequirement:    "158Gi",
-		GPUCountRequirement:       "8",
+		GPUCountRequirement:       "4",
 		TotalGPUMemoryRequirement: "192Gi",
 		PerGPUMemoryRequirement:   "19Gi", // We run llama2 using tensor parallelism, the memory of each GPU needs to be bigger than the tensor shard size.
 		RuntimeParam: model.RuntimeParam{
@@ -135,6 +141,9 @@ func (*llama2Chat70b) GetInferenceParameters() *model.PresetParam {
 }
 func (*llama2Chat70b) GetTuningParameters() *model.PresetParam {
 	return nil // Currently doesn't support fine-tuning
+}
+func (*llama2Chat70b) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*llama2Chat70b) SupportDistributedInference() bool {
 	return true

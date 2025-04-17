@@ -90,6 +90,9 @@ func (*phi4Model) GetTuningParameters() *model.PresetParam {
 		Tag: PresetPhiTagMap["Phi4"],
 	}
 }
+func (*phi4Model) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 
 func (*phi4Model) SupportDistributedInference() bool { return false }
 func (*phi4Model) SupportTuning() bool {
@@ -142,6 +145,10 @@ func (*phi4MiniInstruct) GetTuningParameters() *model.PresetParam {
 		},
 		Tag: PresetPhiTagMap["Phi4MiniInstruct"],
 	}
+}
+
+func (*phi4MiniInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 
 func (*phi4MiniInstruct) SupportDistributedInference() bool { return false }

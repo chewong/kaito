@@ -112,7 +112,7 @@ func GenerateServiceManifest(ctx context.Context, workspaceObj *kaitov1beta1.Wor
 func GenerateStatefulSetManifest(ctx context.Context, workspaceObj *kaitov1beta1.Workspace, imageName string,
 	imagePullSecretRefs []corev1.LocalObjectReference, replicas int, commands []string, containerPorts []corev1.ContainerPort,
 	livenessProbe, readinessProbe *corev1.Probe, resourceRequirements corev1.ResourceRequirements,
-	tolerations []corev1.Toleration, volumes []corev1.Volume, volumeMount []corev1.VolumeMount) *appsv1.StatefulSet {
+	tolerations []corev1.Toleration, volumes []corev1.Volume, volumeMount []corev1.VolumeMount, envVars []corev1.EnvVar) *appsv1.StatefulSet {
 
 	nodeRequirements := make([]corev1.NodeSelectorRequirement, 0, len(workspaceObj.Resource.LabelSelector.MatchLabels))
 	for key, value := range workspaceObj.Resource.LabelSelector.MatchLabels {
@@ -130,13 +130,10 @@ func GenerateStatefulSetManifest(ctx context.Context, workspaceObj *kaitov1beta1
 		MatchLabels: selector,
 	}
 	// Add PYTORCH_CUDA_ALLOC_CONF environment variable
-	envVars := []corev1.EnvVar{
-		{
-			Name:  "PYTORCH_CUDA_ALLOC_CONF",
-			Value: "expandable_segments:True",
-		},
-	}
-
+	envVars = append(envVars, corev1.EnvVar{
+		Name:  "PYTORCH_CUDA_ALLOC_CONF",
+		Value: "expandable_segments:True",
+	})
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      workspaceObj.Name,
@@ -274,7 +271,7 @@ func GenerateTuningJobManifest(ctx context.Context, wObj *kaitov1beta1.Workspace
 func GenerateDeploymentManifest(ctx context.Context, workspaceObj *kaitov1beta1.Workspace, revisionNum string, imageName string,
 	imagePullSecretRefs []corev1.LocalObjectReference, replicas int, commands []string, containerPorts []corev1.ContainerPort,
 	livenessProbe, readinessProbe *corev1.Probe, resourceRequirements corev1.ResourceRequirements,
-	tolerations []corev1.Toleration, volumes []corev1.Volume, volumeMount []corev1.VolumeMount) *appsv1.Deployment {
+	tolerations []corev1.Toleration, volumes []corev1.Volume, volumeMount []corev1.VolumeMount, envVars []corev1.EnvVar) *appsv1.Deployment {
 
 	nodeRequirements := make([]corev1.NodeSelectorRequirement, 0, len(workspaceObj.Resource.LabelSelector.MatchLabels))
 	for key, value := range workspaceObj.Resource.LabelSelector.MatchLabels {
@@ -299,7 +296,7 @@ func GenerateDeploymentManifest(ctx context.Context, workspaceObj *kaitov1beta1.
 	})
 
 	pullerContainers, pullerEnvVars, pullerVolumes := GeneratePullerContainers(workspaceObj, volumeMount)
-	envs = append(envs, pullerEnvVars...)
+	envVars = append(envVars, pullerEnvVars...)
 	volumes = append(volumes, pullerVolumes...)
 
 	return &appsv1.Deployment{
@@ -363,7 +360,7 @@ func GenerateDeploymentManifest(ctx context.Context, workspaceObj *kaitov1beta1.
 							ReadinessProbe: readinessProbe,
 							Ports:          containerPorts,
 							VolumeMounts:   volumeMount,
-							Env:            envs,
+							Env:            envVars,
 						},
 					},
 					Tolerations: tolerations,

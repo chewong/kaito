@@ -84,6 +84,9 @@ func (*llama8b) GetInferenceParameters() *model.PresetParam {
 func (*llama8b) GetTuningParameters() *model.PresetParam {
 	return nil
 }
+func (*llama8b) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*llama8b) SupportDistributedInference() bool {
 	return false
 }
@@ -121,6 +124,9 @@ func (*qwen14b) GetInferenceParameters() *model.PresetParam {
 	}
 }
 func (*qwen14b) GetTuningParameters() *model.PresetParam {
+	return nil
+}
+func (*qwen14b) GetDownloadParameters() *model.DownloadParam {
 	return nil
 }
 func (*qwen14b) SupportDistributedInference() bool {

@@ -109,6 +109,9 @@ func (*phi3Mini4KInst) GetTuningParameters() *model.PresetParam {
 		Tag: PresetPhiTagMap["Phi3Mini4kInstruct"],
 	}
 }
+func (*phi3Mini4KInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*phi3Mini4KInst) SupportDistributedInference() bool { return false }
 func (*phi3Mini4KInst) SupportTuning() bool {
 	return true
@@ -159,6 +162,9 @@ func (*phi3Mini128KInst) GetTuningParameters() *model.PresetParam {
 		},
 		Tag: PresetPhiTagMap["Phi3Mini128kInstruct"],
 	}
+}
+func (*phi3Mini128KInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*phi3Mini128KInst) SupportDistributedInference() bool { return false }
 func (*phi3Mini128KInst) SupportTuning() bool {
@@ -213,6 +219,9 @@ func (*phi3_5MiniInst) GetTuningParameters() *model.PresetParam {
 		Tag: PresetPhiTagMap["Phi3_5MiniInstruct"],
 	}
 }
+func (*phi3_5MiniInst) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*phi3_5MiniInst) SupportDistributedInference() bool { return false }
 func (*phi3_5MiniInst) SupportTuning() bool {
 	return true
@@ -266,6 +275,9 @@ func (*Phi3Medium4kInstruct) GetTuningParameters() *model.PresetParam {
 		Tag: PresetPhiTagMap["Phi3Medium4kInstruct"],
 	}
 }
+func (*Phi3Medium4kInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*Phi3Medium4kInstruct) SupportDistributedInference() bool { return false }
 func (*Phi3Medium4kInstruct) SupportTuning() bool {
 	return true
@@ -316,6 +328,9 @@ func (*Phi3Medium128kInstruct) GetTuningParameters() *model.PresetParam {
 		},
 		Tag: PresetPhiTagMap["Phi3Medium128kInstruct"],
 	}
+}
+func (*Phi3Medium128kInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 func (*Phi3Medium128kInstruct) SupportDistributedInference() bool { return false }
 func (*Phi3Medium128kInstruct) SupportTuning() bool {

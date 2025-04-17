@@ -84,6 +84,9 @@ func (*phi2) GetTuningParameters() *model.PresetParam {
 		Tag:              PresetPhiTagMap["Phi2"],
 	}
 }
+func (*phi2) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
 func (*phi2) SupportDistributedInference() bool {
 	return false
 }

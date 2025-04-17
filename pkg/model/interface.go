@@ -21,6 +21,7 @@ import (
 type Model interface {
 	GetInferenceParameters() *PresetParam
 	GetTuningParameters() *PresetParam
+	GetDownloadParameters() *DownloadParam
 	SupportDistributedInference() bool //If true, the model workload will be a StatefulSet, using the torch elastic runtime framework.
 	SupportTuning() bool
 }
@@ -93,6 +94,12 @@ type VLLMParam struct {
 	// Indicates if vllm supports LoRA (Low-Rank Adaptation) for this model.
 	// doc: https://docs.vllm.ai/en/latest/models/supported_models.html#text-generation-task-generate
 	DisallowLoRA bool
+}
+
+type DownloadParam struct {
+	RepoId   string        // The huggingface repo id of the model.
+	Revision string        // An optional Git revision id which can be a branch name, a tag, or a commit hash.
+	Timeout  time.Duration // The timeout for the model to be downloaded.
 }
 
 func (p *PresetParam) DeepCopy() *PresetParam {

@@ -92,6 +92,10 @@ func (*qwen2_5Coder7BInstruct) GetTuningParameters() *model.PresetParam {
 	}
 }
 
+func (*qwen2_5Coder7BInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
+}
+
 func (*qwen2_5Coder7BInstruct) SupportDistributedInference() bool {
 	return false
 }
@@ -145,6 +149,10 @@ func (*qwen2_5Coder32BInstruct) GetTuningParameters() *model.PresetParam {
 		ReadinessTimeout: time.Duration(30) * time.Minute,
 		Tag:              PresetTagMap["Qwen2.5-Coder-32B-Instruct"],
 	}
+}
+
+func (*qwen2_5Coder32BInstruct) GetDownloadParameters() *model.DownloadParam {
+	return nil
 }
 
 func (*qwen2_5Coder32BInstruct) SupportDistributedInference() bool {
