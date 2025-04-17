@@ -103,15 +103,19 @@ func updateTorchParamsForDistributedInference(ctx context.Context, kubeClient cl
 	return nil
 }
 
-func updateVLLMParamsForDownload(wObj *v1beta1.Workspace, inferenceParams *model.PresetParam, downloadParam *model.DownloadParam) {
-	// If PVC is defined, a job has already been created to download the model.
-	// In this case, we don't need to set the model name in the VLLM parameters.
-	if wObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
-		return
-	}
-	inferenceParams.VLLM.ModelRunParams["model"] = downloadParam.RepoId
-	if downloadParam.Revision != "" {
-		inferenceParams.VLLM.ModelRunParams["revision"] = downloadParam.Revision
+func updateParamsForDownload(wObj *v1beta1.Workspace, inferenceParams *model.PresetParam, downloadParam *model.DownloadParam) {
+	runtimeName := v1beta1.GetWorkspaceRuntimeName(wObj)
+	switch runtimeName {
+	case model.RuntimeNameVLLM:
+		inferenceParams.VLLM.ModelRunParams["model"] = downloadParam.RepoId
+		if downloadParam.Revision != "" {
+			inferenceParams.VLLM.ModelRunParams["code-revision"] = downloadParam.Revision
+		}
+	case model.RuntimeNameHuggingfaceTransformers:
+		inferenceParams.Transformers.ModelRunParams["pretrained_model_name_or_path"] = downloadParam.RepoId
+		if downloadParam.Revision != "" {
+			inferenceParams.Transformers.ModelRunParams["revision"] = downloadParam.Revision
+		}
 	}
 }
 
@@ -127,19 +131,19 @@ func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		}
 	}
 
-	switch workspaceObj.Inference.Preset.AccessMode {
-	case v1beta1.ModelImageAccessModePublic:
-		imageName = string(workspaceObj.Inference.Preset.Name)
-		imageTag := presetObj.Tag
-		registryName := os.Getenv("PRESET_REGISTRY_NAME")
-		imageName = fmt.Sprintf("%s/kaito-%s:%s", registryName, imageName, imageTag)
-	case v1beta1.ModelImageAccessModePrivate:
+	registryName := os.Getenv("PRESET_REGISTRY_NAME")
+	imageName = string(workspaceObj.Inference.Preset.Name)
+	if presetObj.ImageName != "" {
+		imageName = presetObj.ImageName
+	}
+	imageTag := presetObj.Tag
+	imageName = fmt.Sprintf("%s/kaito-%s:%s", registryName, imageName, imageTag)
+
+	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelAccessModePrivate && workspaceObj.Inference.Preset.PresetOptions.Image != "" {
 		imageName = workspaceObj.Inference.Preset.PresetOptions.Image
 		for _, secretName := range workspaceObj.Inference.Preset.PresetOptions.ImagePullSecrets {
 			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})
 		}
-	case v1beta1.ModelImageAccessModeDownload:
-		imageName = "ernestwong.azurecr.io/kaito/base:0.0.2"
 	}
 
 	return imageName, imagePullSecretRefs
@@ -169,9 +173,8 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		}
 	}
 
-	if inferenceParam.ImageAccessMode == string(v1beta1.ModelImageAccessModeDownload) {
-		downloadParam := model.GetDownloadParameters()
-		updateVLLMParamsForDownload(workspaceObj, inferenceParam, downloadParam)
+	if downloadParam := model.GetDownloadParameters(); downloadParam != nil {
+		updateParamsForDownload(workspaceObj, inferenceParam, downloadParam)
 	}
 
 	// resource requirements
@@ -219,24 +222,18 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		volumes = append(volumes, adapterVolume)
 		volumeMounts = append(volumeMounts, adapterVolumeMount)
 	}
-	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelImageAccessModeDownload {
-		// Mount the model weights volume to the inference container if the PVC is defined
-		if workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate != nil {
-			pvc := workspaceObj.Inference.Preset.DownloadOptions.VolumeClaimTemplate
-			pvcName := pvc.GetName()
-			// In the case of static provision, the PVC name will not be empty but default
-			// to workspace name if it is not specified
-			if pvcName == "" {
-				pvcName = workspaceObj.Name
-			}
-			downloadVolume, downloadVolumeMount := utils.ConfigDownloadVolume(pvcName)
-			volumes = append(volumes, downloadVolume)
-			volumeMounts = append(volumeMounts, downloadVolumeMount)
-		} else {
-			// No PVC provided - we are downloading the model at runtime so we need to set any
-			// environment variables for authentication
-			envVars = append(envVars, workspaceObj.Inference.Preset.DownloadOptions.Env...)
-		}
+	if workspaceObj.Inference.Preset.PresetOptions.ModelAccessSecret != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name: "HF_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: workspaceObj.Inference.Preset.PresetOptions.ModelAccessSecret,
+					},
+					Key: "HF_TOKEN",
+				},
+			},
+		})
 	}
 
 	// inference command

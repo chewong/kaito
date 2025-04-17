@@ -170,7 +170,7 @@ func createLlama7BWorkspaceWithPresetPrivateMode(registry, registrySecret, image
 		workspaceObj = utils.GenerateInferenceWorkspaceManifest(uniqueID, namespaceName, fmt.Sprintf("%s/%s:%s", registry, PresetLlama2AChat, imageVersion),
 			numOfNode, "Standard_NC12s_v3", &metav1.LabelSelector{
 				MatchLabels: map[string]string{"kaito-workspace": "private-preset-e2e-test-llama-2-7b"},
-			}, nil, PresetLlama2AChat, kaitov1beta1.ModelImageAccessModePrivate, []string{registrySecret}, nil, nil)
+			}, nil, PresetLlama2AChat, kaitov1beta1.ModelAccessModePrivate, []string{registrySecret}, nil, nil)
 
 		createAndValidateWorkspace(workspaceObj)
 	})
@@ -184,7 +184,7 @@ func createLlama13BWorkspaceWithPresetPrivateMode(registry, registrySecret, imag
 		workspaceObj = utils.GenerateInferenceWorkspaceManifest(uniqueID, namespaceName, fmt.Sprintf("%s/%s:%s", registry, PresetLlama2BChat, imageVersion),
 			numOfNode, "Standard_NC12s_v3", &metav1.LabelSelector{
 				MatchLabels: map[string]string{"kaito-workspace": "private-preset-e2e-test-llama-2-13b"},
-			}, nil, PresetLlama2BChat, kaitov1beta1.ModelImageAccessModePrivate, []string{registrySecret}, nil, nil)
+			}, nil, PresetLlama2BChat, kaitov1beta1.ModelAccessModePrivate, []string{registrySecret}, nil, nil)
 
 		createAndValidateWorkspace(workspaceObj)
 	})

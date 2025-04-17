@@ -437,8 +437,8 @@ func (i *InferenceSpec) validateCreate(ctx context.Context, namespace string, in
 		}
 		modelPreset := plugin.KaitoModelRegister.MustGet(string(i.Preset.Name))
 		// Validate private preset has private image specified
-		if modelPreset.GetInferenceParameters().ImageAccessMode == string(ModelImageAccessModePrivate) &&
-			i.Preset.AccessMode != ModelImageAccessModePrivate {
+		if modelPreset.GetInferenceParameters().AccessMode == string(ModelAccessModePrivate) &&
+			i.Preset.AccessMode != ModelAccessModePrivate {
 			errs = errs.Also(apis.ErrGeneric("This preset only supports private AccessMode, AccessMode must be private to continue"))
 		}
 		useAdapterStrength := false
@@ -458,9 +458,17 @@ func (i *InferenceSpec) validateCreate(ctx context.Context, namespace string, in
 		if err != nil {
 			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Runtime validation: %v", err)))
 		}
+
 		// Additional validations for Preset
-		if i.Preset.AccessMode == ModelImageAccessModePrivate && i.Preset.Image == "" {
-			errs = errs.Also(apis.ErrGeneric("When AccessMode is private, an image must be provided in PresetOptions"))
+		if i.Preset.AccessMode == ModelAccessModePrivate {
+			// it's okay to not have image if the preset already contains an image name
+			if i.Preset.Image == "" && modelPreset.GetInferenceParameters().ImageName == "" {
+				errs = errs.Also(apis.ErrGeneric("When AccessMode is private, an image must be provided in PresetOptions"))
+			} else if modelPreset.GetInferenceParameters().ImageName != "" && i.Preset.ModelAccessSecret == "" {
+				// ensure the model access secret is set if we are going to download
+				// the model from huggingface
+				errs = errs.Also(apis.ErrGeneric("When AccessMode is private, a model access secret in the same namespace as the workspace with HF_TOKEN key must be provided"))
+			}
 		}
 		// Note: we don't enforce private access mode to have image secrets, in case anonymous pulling is enabled
 	}

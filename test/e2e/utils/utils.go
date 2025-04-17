@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	InferenceModeCustomTemplate kaitov1beta1.ModelImageAccessMode = "customTemplate"
+	InferenceModeCustomTemplate kaitov1beta1.ModelAccessMode = "customTemplate"
 
 	ExampleDatasetURL = "https://huggingface.co/datasets/philschmid/dolly-15k-oai-style/resolve/main/data/train-00000-of-00001-54e3756291ca09c6.parquet?download=true"
 )
@@ -258,7 +258,7 @@ func ExtractModelVersion(configs map[string]interface{}) (map[string]string, err
 
 func GenerateInferenceWorkspaceManifest(name, namespace, imageName string, resourceCount int, instanceType string,
 	labelSelector *metav1.LabelSelector, preferredNodes []string, presetName kaitov1beta1.ModelName,
-	accessMode kaitov1beta1.ModelImageAccessMode, imagePullSecret []string,
+	accessMode kaitov1beta1.ModelAccessMode, imagePullSecret []string,
 	podTemplate *corev1.PodTemplateSpec, adapters []kaitov1beta1.AdapterSpec) *kaitov1beta1.Workspace {
 
 	workspace := &kaitov1beta1.Workspace{
@@ -279,7 +279,7 @@ func GenerateInferenceWorkspaceManifest(name, namespace, imageName string, resou
 
 	var workspaceInference kaitov1beta1.InferenceSpec
 	if accessMode == kaitov1beta1.ModelImageAccessModePublic ||
-		accessMode == kaitov1beta1.ModelImageAccessModePrivate {
+		accessMode == kaitov1beta1.ModelAccessModePrivate {
 		workspaceInference.Preset = &kaitov1beta1.PresetSpec{
 			PresetMeta: kaitov1beta1.PresetMeta{
 				Name:       presetName,
@@ -307,7 +307,7 @@ func GenerateInferenceWorkspaceManifest(name, namespace, imageName string, resou
 
 func GenerateInferenceWorkspaceManifestWithVLLM(name, namespace, imageName string, resourceCount int, instanceType string,
 	labelSelector *metav1.LabelSelector, preferredNodes []string, presetName kaitov1beta1.ModelName,
-	accessMode kaitov1beta1.ModelImageAccessMode, imagePullSecret []string,
+	accessMode kaitov1beta1.ModelAccessMode, imagePullSecret []string,
 	podTemplate *corev1.PodTemplateSpec, adapters []kaitov1beta1.AdapterSpec) *kaitov1beta1.Workspace {
 	workspace := GenerateInferenceWorkspaceManifest(name, namespace, imageName, resourceCount, instanceType,
 		labelSelector, preferredNodes, presetName, accessMode, imagePullSecret, podTemplate, adapters)
@@ -347,7 +347,7 @@ func GenerateTuningWorkspaceManifest(name, namespace, imageName string, resource
 
 func GenerateE2ETuningWorkspaceManifest(name, namespace, imageName, datasetImageName, outputRegistry string,
 	resourceCount int, instanceType string, labelSelector *metav1.LabelSelector,
-	preferredNodes []string, presetName kaitov1beta1.ModelName, accessMode kaitov1beta1.ModelImageAccessMode,
+	preferredNodes []string, presetName kaitov1beta1.ModelName, accessMode kaitov1beta1.ModelAccessMode,
 	imagePullSecret []string, customConfigMapName string) *kaitov1beta1.Workspace {
 	workspace := &kaitov1beta1.Workspace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -364,7 +364,7 @@ func GenerateE2ETuningWorkspaceManifest(name, namespace, imageName, datasetImage
 
 	var workspaceTuning kaitov1beta1.TuningSpec
 	if accessMode == kaitov1beta1.ModelImageAccessModePublic ||
-		accessMode == kaitov1beta1.ModelImageAccessModePrivate {
+		accessMode == kaitov1beta1.ModelAccessModePrivate {
 		workspaceTuning.Preset = &kaitov1beta1.PresetSpec{
 			PresetMeta: kaitov1beta1.PresetMeta{
 				Name:       presetName,
@@ -412,29 +412,29 @@ func GenerateE2ETuningConfigMapManifest(namespace string) *corev1.ConfigMap {
     torch_dtype: "bfloat16"
     local_files_only: true
     device_map: "auto"
-  
+
   QuantizationConfig:
     load_in_4bit: true
     bnb_4bit_quant_type: "nf4"
     bnb_4bit_compute_dtype: "bfloat16"
     bnb_4bit_use_double_quant: true
-  
+
   LoraConfig:
     r: 8
     lora_alpha: 8
     lora_dropout: 0.0
     target_modules: ['k_proj', 'q_proj', 'v_proj', 'o_proj', "gate_proj", "down_proj", "up_proj"]
-  
+
   TrainingArguments:
     output_dir: "/mnt/results"
     ddp_find_unused_parameters: false
     save_strategy: "epoch"
     per_device_train_batch_size: 1
     max_steps: 2  # Adding this line to limit training to 2 steps
-  
+
   DataCollator:
     mlm: true
-  
+
   DatasetConfig:
     shuffle_dataset: true
     train_test_split: 1`,

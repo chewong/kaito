@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	ModelImageAccessModePublic  ModelImageAccessMode = "public"
-	ModelImageAccessModePrivate ModelImageAccessMode = "private"
+	ModelImageAccessModePublic ModelAccessMode = "public"
+	ModelAccessModePrivate     ModelAccessMode = "private"
 )
 
 // ResourceSpec describes the resource requirement of running the workload.
@@ -42,7 +42,7 @@ type ResourceSpec struct {
 type ModelName string
 
 // +kubebuilder:validation:Enum=public;private
-type ModelImageAccessMode string
+type ModelAccessMode string
 
 type PresetMeta struct {
 	// Name of the supported models with preset configurations.
@@ -52,7 +52,7 @@ type PresetMeta struct {
 	// If this field is "private", user needs to provide the private image information in PresetOptions.
 	// +kubebuilder:default:="public"
 	// +optional
-	AccessMode ModelImageAccessMode `json:"accessMode,omitempty"`
+	AccessMode ModelAccessMode `json:"accessMode,omitempty"`
 }
 
 type PresetOptions struct {
@@ -62,6 +62,9 @@ type PresetOptions struct {
 	// ImagePullSecrets is a list of secret names in the same namespace used for pulling the model image.
 	// +optional
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+	// ModelAccessSecret is the name of the secret that contains the huggingface access token.
+	// +optional
+	ModelAccessSecret string `json:"modelAccessSecret,omitempty"`
 }
 
 // PresetSpec provides the information for rendering preset configurations to run the model inference service.

@@ -47,9 +47,10 @@ var (
 
 // PresetParam defines the preset inference parameters for a model.
 type PresetParam struct {
+	ImageName       string // The model image name. If empty, the image name will be the same as preset name.
 	Tag             string // The model image tag
 	ModelFamilyName string // The name of the model family.
-	ImageAccessMode string // Defines where the Image is Public or Private.
+	AccessMode      string // Defines where the Image is Public or Private.
 
 	DiskStorageRequirement        string         // Disk storage requirements for the model.
 	GPUCountRequirement           string         // Number of GPUs required for the Preset. Used for inference.
@@ -97,9 +98,8 @@ type VLLMParam struct {
 }
 
 type DownloadParam struct {
-	RepoId   string        // The huggingface repo id of the model.
-	Revision string        // An optional Git revision id which can be a branch name, a tag, or a commit hash.
-	Timeout  time.Duration // The timeout for the model to be downloaded.
+	RepoId   string // The huggingface repo id of the model.
+	Revision string // An optional Git revision id which can be a branch name, a tag, or a commit hash.
 }
 
 func (p *PresetParam) DeepCopy() *PresetParam {

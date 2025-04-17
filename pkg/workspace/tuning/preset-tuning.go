@@ -64,7 +64,7 @@ func getInstanceGPUCount(sku string) int {
 func GetTuningImageInfo(ctx context.Context, workspaceObj *kaitov1beta1.Workspace, presetObj *model.PresetParam) (string, []corev1.LocalObjectReference) {
 	imagePullSecretRefs := []corev1.LocalObjectReference{}
 	// Check if the workspace preset's access mode is private
-	if string(workspaceObj.Tuning.Preset.AccessMode) == string(kaitov1beta1.ModelImageAccessModePrivate) {
+	if string(workspaceObj.Tuning.Preset.AccessMode) == string(kaitov1beta1.ModelAccessModePrivate) {
 		imageName := workspaceObj.Tuning.Preset.PresetOptions.Image
 		for _, secretName := range workspaceObj.Tuning.Preset.PresetOptions.ImagePullSecrets {
 			imagePullSecretRefs = append(imagePullSecretRefs, corev1.LocalObjectReference{Name: secretName})

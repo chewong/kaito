@@ -43,7 +43,7 @@ type phi2 struct{}
 func (*phi2) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "Phi",
-		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePublic),
+		AccessMode:                string(kaitov1beta1.ModelImageAccessModePublic),
 		DiskStorageRequirement:    "50Gi",
 		GPUCountRequirement:       "1",
 		TotalGPUMemoryRequirement: "12Gi",
@@ -68,7 +68,7 @@ func (*phi2) GetInferenceParameters() *model.PresetParam {
 func (*phi2) GetTuningParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "Phi",
-		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePublic),
+		AccessMode:                string(kaitov1beta1.ModelImageAccessModePublic),
 		DiskStorageRequirement:    "50Gi",
 		GPUCountRequirement:       "1",
 		TotalGPUMemoryRequirement: "16Gi",

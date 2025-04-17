@@ -3,14 +3,15 @@ kind: Workspace
 metadata:
   name: workspace-llama-3-1-8b-instruct
 resource:
-  instanceType: "Standard_ND96asr_A100_v4"
+  instanceType: "Standard_NC48ads_A100_v4"
   preferredNodes:
-    - aks-gpunodepool-15928231-vmss000000
+    - aks-gpunodepool-31608519-vmss000000
   labelSelector:
     matchLabels:
       kubernetes.azure.com/accelerator: nvidia
 inference:
   preset:
-    name: "llama-3.1-8b-instruct"
+    name: llama-3.1-8b-instruct
     accessMode: private
-    presetOptions
+    presetOptions:
+      modelAccessSecret: hugging-face-hub-token

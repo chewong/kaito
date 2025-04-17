@@ -41,7 +41,7 @@ type llama2Text7b struct{}
 func (*llama2Text7b) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "LLaMa2",
-		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePrivate),
+		AccessMode:                string(kaitov1beta1.ModelAccessModePrivate),
 		DiskStorageRequirement:    "34Gi",
 		GPUCountRequirement:       "1",
 		TotalGPUMemoryRequirement: "14Gi",
@@ -80,7 +80,7 @@ type llama2Text13b struct{}
 func (*llama2Text13b) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "LLaMa2",
-		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePrivate),
+		AccessMode:                string(kaitov1beta1.ModelAccessModePrivate),
 		DiskStorageRequirement:    "46Gi",
 		GPUCountRequirement:       "2",
 		TotalGPUMemoryRequirement: "30Gi",
@@ -119,7 +119,7 @@ type llama2Text70b struct{}
 func (*llama2Text70b) GetInferenceParameters() *model.PresetParam {
 	return &model.PresetParam{
 		ModelFamilyName:           "LLaMa2",
-		ImageAccessMode:           string(kaitov1beta1.ModelImageAccessModePrivate),
+		AccessMode:                string(kaitov1beta1.ModelAccessModePrivate),
 		DiskStorageRequirement:    "158Gi",
 		GPUCountRequirement:       "8",
 		TotalGPUMemoryRequirement: "152Gi",
