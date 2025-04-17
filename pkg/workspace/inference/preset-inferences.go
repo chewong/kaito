@@ -5,7 +5,6 @@ package inference
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -131,13 +130,13 @@ func GetInferenceImageInfo(ctx context.Context, workspaceObj *v1beta1.Workspace,
 		}
 	}
 
-	registryName := os.Getenv("PRESET_REGISTRY_NAME")
-	imageName = string(workspaceObj.Inference.Preset.Name)
-	if presetObj.ImageName != "" {
-		imageName = presetObj.ImageName
-	}
-	imageTag := presetObj.Tag
-	imageName = fmt.Sprintf("%s/kaito-%s:%s", registryName, imageName, imageTag)
+	// registryName := os.Getenv("PRESET_REGISTRY_NAME")
+	// imageName = string(workspaceObj.Inference.Preset.Name)
+	// if presetObj.ImageName != "" {
+	// 	imageName = presetObj.ImageName
+	// }
+	// imageTag := presetObj.Tag
+	imageName = "ernestwong2.azurecr.io/kaito-base:0.0.1"
 
 	if workspaceObj.Inference.Preset.AccessMode == v1beta1.ModelAccessModePrivate && workspaceObj.Inference.Preset.PresetOptions.Image != "" {
 		imageName = workspaceObj.Inference.Preset.PresetOptions.Image
@@ -247,6 +246,15 @@ func CreatePresetInference(ctx context.Context, workspaceObj *v1beta1.Workspace,
 			AdaptersEnabled: len(workspaceObj.Inference.Adapters) > 0,
 		},
 	})
+
+	// PYTORCH_CUDA_ALLOC_CONF with expandable_segments:True doesn't work with
+	// vLLM's custom_all_reduce - https://github.com/vllm-project/vllm/issues/9046
+	if runtimeName != pkgmodel.RuntimeNameVLLM {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "PYTORCH_CUDA_ALLOC_CONF",
+			Value: "expandable_segments:True",
+		})
+	}
 
 	image, imagePullSecrets := GetInferenceImageInfo(ctx, workspaceObj, inferenceParam)
 

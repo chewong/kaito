@@ -14,4 +14,4 @@ inference:
     name: llama-3.1-8b-instruct
     accessMode: private
     presetOptions:
-      modelAccessSecret: hugging-face-hub-token
+      modelAccessSecret: hf-token
