@@ -1,0 +1,15 @@
+apiVersion: kaito.sh/v1beta1
+kind: Workspace
+metadata:
+  name: workspace-llama-3-3-70b-instruct
+resource:
+  instanceType: "Standard_NC24ads_A100_v4"
+  count: 2
+  labelSelector:
+    matchLabels:
+      node.kubernetes.io/instance-type: Standard_NC24ads_A100_v4
+inference:
+  preset:
+    name: llama-3.3-70b-instruct
+    presetOptions:
+      modelAccessSecret: hf-token
