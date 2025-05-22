@@ -156,13 +156,13 @@ func createPhi2WorkspaceWithPresetPublicMode(numOfNode int) *kaitov1beta1.Worksp
 	return workspaceObj
 }
 
-func createLlama3_1_8BInstructWorkspaceWithPresetPublicMode(numOfNode int) *kaitov1beta1.Workspace {
+func createLlama3_1_8BInstructWorkspaceWithPresetPublicMode(instanceType string, numOfNode int) *kaitov1beta1.Workspace {
 	modelSecret := createAndValidateModelSecret()
 	workspaceObj := &kaitov1beta1.Workspace{}
 	By("Creating a workspace CR with Llama 3.1-8B Instruct preset public mode", func() {
 		uniqueID := fmt.Sprint("preset-llama3-1-8b-", rand.Intn(1000))
 		workspaceObj = utils.GenerateInferenceWorkspaceManifest(uniqueID, namespaceName, "",
-			numOfNode, "Standard_NC12s_v3", &metav1.LabelSelector{
+			numOfNode, instanceType, &metav1.LabelSelector{
 				MatchLabels: map[string]string{"kaito-workspace": "public-preset-e2e-test-llama3-1-8b"},
 			}, nil, PresetLlama3_1_8BInstruct, nil, nil, nil, modelSecret.Name) // Llama 3.1-8B Instruct model requires a model access secret
 
@@ -396,10 +396,7 @@ func validateResourceStatus(workspaceObj *kaitov1beta1.Workspace) {
 	})
 }
 
-func validateAssociatedService(workspaceObj *kaitov1beta1.Workspace) {
-	serviceName := workspaceObj.Name
-	serviceNamespace := workspaceObj.Namespace
-
+func validateService(serviceName, serviceNamespace string) {
 	By(fmt.Sprintf("Checking for service %s in namespace %s", serviceName, serviceNamespace), func() {
 		service := &v1.Service{}
 
@@ -422,6 +419,18 @@ func validateAssociatedService(workspaceObj *kaitov1beta1.Workspace) {
 			return true
 		}, 10*time.Minute, utils.PollInterval).Should(BeTrue(), "Failed to wait for service to be created")
 	})
+}
+
+func validateAssociatedService(workspaceObj *kaitov1beta1.Workspace) {
+	serviceName := workspaceObj.Name
+	serviceNamespace := workspaceObj.Namespace
+	validateService(serviceName, serviceNamespace)
+}
+
+func validateHeadlessService(workspaceObj *kaitov1beta1.Workspace) {
+	serviceName := fmt.Sprintf("%s-headless", workspaceObj.Name)
+	serviceNamespace := workspaceObj.Namespace
+	validateService(serviceName, serviceNamespace)
 }
 
 // validateInferenceResource validates inference deployment
@@ -819,7 +828,11 @@ var _ = Describe("Workspace Preset", func() {
 
 		time.Sleep(30 * time.Second)
 
+		// Validate the model api server endpoint
 		validateAssociatedService(workspaceObj)
+		// Valdiate the headless service for the workload
+		validateHeadlessService(workspaceObj)
+
 		validateInferenceConfig(workspaceObj)
 
 		validateInferenceResource(workspaceObj, int32(numOfNode), false)
@@ -869,7 +882,7 @@ var _ = Describe("Workspace Preset", func() {
 
 	It("should create a llama-3.1-8b-instruct workspace with preset public mode successfully", utils.GinkgoLabelFastCheck, func() {
 		numOfNode := 1
-		workspaceObj := createLlama3_1_8BInstructWorkspaceWithPresetPublicMode(numOfNode)
+		workspaceObj := createLlama3_1_8BInstructWorkspaceWithPresetPublicMode("Standard_NC12s_v3", numOfNode)
 
 		defer cleanupResources(workspaceObj)
 		time.Sleep(30 * time.Second)
@@ -883,6 +896,27 @@ var _ = Describe("Workspace Preset", func() {
 		validateInferenceConfig(workspaceObj)
 
 		validateInferenceResource(workspaceObj, int32(numOfNode), false)
+
+		validateWorkspaceReadiness(workspaceObj)
+	})
+
+	It("should create a llama-3.1-8b-instruct workspace with preset public mode in vLLM distributed inference mode successfully", utils.GinkgoLabelFastCheck, func() {
+		// One Standard_NC6s_v3 does not have enough GPU memory for 8B model in FP16,
+		// so we need to create 2 Standard_NC6s_v3 nodes
+		numOfNode := 2
+
+		workspaceObj := createLlama3_1_8BInstructWorkspaceWithPresetPublicMode("Standard_NC6s_v3", numOfNode)
+
+		defer cleanupResources(workspaceObj)
+		time.Sleep(30 * time.Second)
+
+		validateCreateNode(workspaceObj, numOfNode)
+		validateResourceStatus(workspaceObj)
+
+		validateAssociatedService(workspaceObj)
+		validateInferenceConfig(workspaceObj)
+
+		validateInferenceResource(workspaceObj, int32(numOfNode), true)
 
 		validateWorkspaceReadiness(workspaceObj)
 	})

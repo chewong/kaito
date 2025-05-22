@@ -26,6 +26,7 @@ import (
 const (
 	ProbePath = "/health"
 	Port5000  = 5000
+	Port6379  = 6379
 )
 
 var (
@@ -243,7 +244,7 @@ func getDistributedInferenceProbe(probeType probeType, wObj *v1beta1.Workspace, 
 	}
 	switch probeType {
 	case probeTypeLiveness:
-		args["ray-port"] = "6379"
+		args["ray-port"] = strconv.Itoa(Port6379)
 	case probeTypeReadiness:
 		args["vllm-port"] = strconv.Itoa(Port5000)
 	}
