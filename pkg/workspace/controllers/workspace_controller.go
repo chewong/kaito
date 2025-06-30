@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
@@ -35,9 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gaiev1alpha2 "sigs.k8s.io/gateway-api-inference-extension/api/v1alpha2"
 	karpenterv1 "sigs.k8s.io/karpenter/pkg/apis/v1"
 
 	kaitov1beta1 "github.com/kaito-project/kaito/api/v1beta1"
+	"github.com/kaito-project/kaito/pkg/featuregates"
 	"github.com/kaito-project/kaito/pkg/utils"
 	"github.com/kaito-project/kaito/pkg/utils/consts"
 	"github.com/kaito-project/kaito/pkg/utils/nodeclaim"
@@ -764,6 +767,25 @@ func (c *WorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}).
 		Watches(&karpenterv1.NodeClaim{}, c.watchNodeClaims(), builder.WithPredicates(nodeclaim.NodeClaimPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5})
+
+	// If the Gateway API Inference Extension feature gate is enabled,
+	// we will ensure the InferencePool and InferenceModel kinds exist in the cluster.
+	if featuregates.FeatureGates[consts.FeatureFlagGatewayAPIInferenceExtension] {
+		for _, gvk := range []schema.GroupVersionKind{
+			gaiev1alpha2.SchemeGroupVersion.WithKind("InferencePool"),
+			gaiev1alpha2.SchemeGroupVersion.WithKind("InferenceModel"),
+		} {
+			found, err := utils.EnsureKindExists(mgr.GetConfig(), gvk)
+			if err != nil {
+				return fmt.Errorf("failed to ensure kind %s exists: %w", gvk.Kind, err)
+			}
+			if !found {
+				return fmt.Errorf("%s not found in the cluster, please ensure the Gateway API Inference Extension is installed", gvk.String())
+			}
+		}
+		builder = builder.Owns(&gaiev1alpha2.InferencePool{}).
+			Owns(&gaiev1alpha2.InferenceModel{})
+	}
 
 	go monitorWorkspaces(context.Background(), c.Client)
 
