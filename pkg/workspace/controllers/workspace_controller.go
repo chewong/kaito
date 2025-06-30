@@ -19,11 +19,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -41,6 +43,7 @@ import (
 
 	kaitov1beta1 "github.com/kaito-project/kaito/api/v1beta1"
 	"github.com/kaito-project/kaito/pkg/featuregates"
+	pkgmodel "github.com/kaito-project/kaito/pkg/model"
 	"github.com/kaito-project/kaito/pkg/utils"
 	"github.com/kaito-project/kaito/pkg/utils/consts"
 	"github.com/kaito-project/kaito/pkg/utils/nodeclaim"
@@ -178,6 +181,13 @@ func (c *WorkspaceReconciler) addOrUpdateWorkspace(ctx context.Context, wObj *ka
 				return reconcile.Result{}, updateErr
 			}
 			return reconcile.Result{}, err
+		}
+		if err = c.ensureGatewayAPIInferenceExtension(ctx, wObj); err != nil {
+			if updateErr := c.updateStatusConditionIfNotMatch(ctx, wObj, kaitov1beta1.WorkspaceConditionTypeSucceeded, metav1.ConditionFalse,
+				"workspaceFailed", err.Error()); updateErr != nil {
+				klog.ErrorS(updateErr, "failed to update workspace status", "workspace", klog.KObj(wObj))
+				return reconcile.Result{}, updateErr
+			}
 		}
 
 		if err = c.updateStatusConditionIfNotMatch(ctx, wObj, kaitov1beta1.WorkspaceConditionTypeSucceeded, metav1.ConditionTrue,
@@ -754,6 +764,40 @@ func (c *WorkspaceReconciler) applyInference(ctx context.Context, wObj *kaitov1b
 	return nil
 }
 
+// ensureGatewayAPIInferenceExtension ensures the Gateway API Inference
+// Extension components are applied and configured correctly.
+func (c *WorkspaceReconciler) ensureGatewayAPIInferenceExtension(ctx context.Context, wObj *kaitov1beta1.Workspace) error {
+	runtimeName := kaitov1beta1.GetWorkspaceRuntimeName(wObj)
+	isPresetInference := wObj.Inference != nil && wObj.Inference.Preset != nil
+
+	// If the Gateway API Inference Extension feature gate is not enabled,
+	// or the runtime is not VLLM, or the inference is not preset-based,
+	// we do not need to apply the Gateway API Inference Extension components.
+	// This is because the Gateway API Inference Extension is specifically designed
+	// to work with VLLM and preset-based inference workloads.
+	if !featuregates.FeatureGates[consts.FeatureFlagGatewayAPIInferenceExtension] ||
+		runtimeName != pkgmodel.RuntimeNameVLLM || !isPresetInference {
+		return nil
+	}
+
+	var errs []error
+
+	inferencePool := manifests.GenerateInferencePool(wObj)
+	err := resources.CreateResource(ctx, inferencePool, c.Client)
+	errs = append(errs, client.IgnoreAlreadyExists(err))
+
+	inferenceModel := manifests.GenerateInferenceModel(wObj)
+	err = resources.CreateResource(ctx, inferenceModel, c.Client)
+	errs = append(errs, client.IgnoreAlreadyExists(err))
+
+	for _, component := range manifests.GenerateEndpointPickerComponents(wObj) {
+		err := resources.CreateResource(ctx, component, c.Client)
+		errs = append(errs, client.IgnoreAlreadyExists(err))
+	}
+
+	return kerrors.NewAggregate(errs)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (c *WorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c.Recorder = mgr.GetEventRecorderFor("Workspace")
@@ -783,8 +827,12 @@ func (c *WorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return fmt.Errorf("%s not found in the cluster, please ensure the Gateway API Inference Extension is installed", gvk.String())
 			}
 		}
+
 		builder = builder.Owns(&gaiev1alpha2.InferencePool{}).
-			Owns(&gaiev1alpha2.InferenceModel{})
+			Owns(&gaiev1alpha2.InferenceModel{}).
+			Owns(&rbacv1.Role{}).
+			Owns(&rbacv1.RoleBinding{}).
+			Owns(&corev1.ServiceAccount{})
 	}
 
 	go monitorWorkspaces(context.Background(), c.Client)
