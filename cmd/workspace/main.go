@@ -85,6 +85,11 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	if err := featuregates.ParseAndValidateFeatureGates(featureGates); err != nil {
+		klog.ErrorS(err, "unable to set `feature-gates` flag")
+		exitWithErrorFunc()
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	ctx := withShutdownSignal(context.Background())
@@ -170,11 +175,6 @@ func main() {
 
 		// wait 2 seconds to allow reconciling webhookconfiguration and service endpoint.
 		time.Sleep(2 * time.Second)
-	}
-
-	if err := featuregates.ParseAndValidateFeatureGates(featureGates); err != nil {
-		klog.ErrorS(err, "unable to set `feature-gates` flag")
-		exitWithErrorFunc()
 	}
 
 	klog.InfoS("starting manager")
