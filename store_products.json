@@ -1,0 +1,21 @@
+{
+  "index_name": "store_index",
+  "documents": [
+    {
+      "text": "Contoso Catnip's Friend - Watch your feline friend embark on a fishing adventure with Contoso Catnip's Friend toy. Packed with irresistible catnip and dangling fish lure. Price: .99",
+      "metadata": {
+        "author": "Contoso Pet Supply",
+        "category": "Cat Toys",
+        "url": "http://<STORE_IP>/product/1"
+      }
+    },
+    {
+      "text": "Salty Sailor's Squeaky Squid - Let your dog set sail with the Salty Sailor's Squeaky Squid. This interactive toy provides hours of fun, featuring multiple squeakers and crinkle tentacles. Price: .99",
+      "metadata": {
+        "author": "Contoso Pet Supply",
+        "category": "Dog Toys",
+        "url": "http://<STORE_IP>/product/2"
+      }
+    }
+  ]
+}
